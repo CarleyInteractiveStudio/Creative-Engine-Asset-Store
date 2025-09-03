@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categoría - Creative Engine Store</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Store Logo"></a>
+            <span>Creative Engine Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html">Scripts</a></li>
+                <li><a href="category.html">Modelos 2D</a></li>
+                <li><a href="category.html">Escenas</a></li>
+                <li><a href="category.html">Sonidos</a></li>
+                <li><a href="category.html">UI</a></li>
+                <li><a href="category.html">Efectos</a></li>
+                <li><a href="category.html">Texturas</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <a href="login.html" class="btn btn-secondary">Iniciar Sesión</a>
+            <a href="#" class="btn btn-primary">Registrarse</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="category-page-layout">
+            <aside class="filters-sidebar">
+                <h3>Filtros</h3>
+                <div class="filter-group">
+                    <h4>Ordenar por</h4>
+                    <select name="sort" id="sort">
+                        <option value="newest">Más Nuevos</option>
+                        <option value="price-asc">Precio: Menor a Mayor</option>
+                        <option value="price-desc">Precio: Mayor a Menor</option>
+                        <option value="rating">Mejor Valorados</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <h4>Precio</h4>
+                    <input type="range" min="0" max="100" value="100">
+                    <span>Hasta $100</span>
+                </div>
+                <div class="filter-group">
+                    <h4>Plataforma</h4>
+                    <label><input type="checkbox" name="platform" value="all" checked> Todas</label>
+                    <label><input type="checkbox" name="platform" value="windows"> Windows</label>
+                    <label><input type="checkbox" name="platform" value="mac"> macOS</label>
+                    <label><input type="checkbox" name="platform" value="linux"> Linux</label>
+                </div>
+            </aside>
+            <section class="category-content">
+                <h1 class="category-title">Scripts</h1>
+                <div class="asset-grid">
+                    <!-- Fila de Assets de Ejemplo -->
+                    <div class="asset-card">
+                        <img src="https://via.placeholder.com/300x200.png?text=Script+1" alt="Asset 1" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">Sistema de Inventario</h3>
+                            <p class="asset-author">por CoderPro</p>
+                            <p class="asset-price">$12.00</p>
+                        </div>
+                    </div>
+                    <div class="asset-card">
+                        <img src="https://via.placeholder.com/300x200.png?text=Script+2" alt="Asset 2" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">Controlador de Personaje</h3>
+                            <p class="asset-author">por GameDevGuru</p>
+                            <p class="asset-price">$5.00</p>
+                        </div>
+                    </div>
+                    <div class="asset-card">
+                        <img src="https://via.placeholder.com/300x200.png?text=Script+3" alt="Asset 3" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">IA de Enemigos</h3>
+                            <p class="asset-author">por AI-Wizard</p>
+                            <p class="asset-price">$25.00</p>
+                        </div>
+                    </div>
+                    <div class="asset-card">
+                        <img src="https://via.placeholder.com/300x200.png?text=Script+4" alt="Asset 4" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">Sistema de Guardado</h3>
+                            <p class="asset-author">por DataSaver</p>
+                            <p class="asset-price">$8.00</p>
+                        </div>
+                    </div>
+                    <div class="asset-card">
+                        <img src="https://via.placeholder.com/300x200.png?text=Script+5" alt="Asset 5" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">Gestor de Escenas</h3>
+                            <p class="asset-author">por LevelMaster</p>
+                            <p class="asset-price">$10.00</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
