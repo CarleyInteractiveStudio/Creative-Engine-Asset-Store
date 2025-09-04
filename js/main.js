@@ -336,11 +336,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadUserProducts();
+        loadAdminStats();
     }
 
     // Lógica para la página de Admin
     const pendingProductsList = document.getElementById('pending-products-list');
     if (pendingProductsList) {
+        async function loadAdminStats() {
+            // 1. Total de productos
+            const { count, error: countError } = await supabaseClient
+                .from('products')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved');
+            document.getElementById('stats-total-products').textContent = countError ? 'N/A' : count;
+
+            // 2. Ingresos (simulado)
+            const totalRevenue = 12540.50;
+            const monthlySales = 1850.75;
+            document.getElementById('stats-total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
+            document.getElementById('stats-monthly-sales').textContent = `$${monthlySales.toFixed(2)}`;
+        }
+
         async function loadPendingProducts() {
             const { data: products, error } = await supabaseClient
                 .from('products')
@@ -437,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         loadPendingProducts();
+        loadAdminStats();
     }
 
     // Lógica para cargar productos en la página de inicio
@@ -505,6 +522,139 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         loadCategoryProducts();
     }
+
+    const approvedProductsList = document.getElementById('approved-products-list');
+    if (approvedProductsList) {
+        async function loadApprovedProducts() {
+             const { data: products, error } = await supabaseClient
+                .from('products')
+                .select(`
+                    id,
+                    name,
+                    price,
+                    is_suspended,
+                    profiles ( id, username )
+                `)
+                .eq('status', 'approved');
+
+            if (error) {
+                console.error('Error cargando productos aprobados:', error);
+                return;
+            }
+
+            let productHTML = '';
+            for (const product of products) {
+                const suspendButtonText = product.is_suspended ? 'Rehabilitar' : 'Suspender';
+                productHTML += `
+                    <div class="pending-product-item" id="product-approved-${product.id}">
+                        <div class="pending-product-info">
+                            <h3>${product.name} ${product.is_suspended ? '(Suspendido)' : ''}</h3>
+                            <p>Vendedor: ${product.profiles.username || 'N/A'}</p>
+                        </div>
+                        <div class="pending-product-actions">
+                            <a href="edit-product.html?id=${product.id}" class="btn btn-secondary">Editar</a>
+                            <button class="btn btn-secondary suspend-btn" data-id="${product.id}" data-suspended="${product.is_suspended}">${suspendButtonText}</button>
+                            <button class="btn btn-danger delete-btn" data-id="${product.id}">Borrar</button>
+                        </div>
+                    </div>
+                `;
+            }
+            approvedProductsList.innerHTML = productHTML || '<p>No hay productos aprobados.</p>';
+        }
+        loadApprovedProducts();
+    }
+
+    // Lógica para la página de edición de productos
+    const editForm = document.getElementById('edit-form');
+    if (editForm) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        if (!productId) {
+            window.location.href = 'admin.html';
+        }
+
+        // Cargar datos del producto
+        async function loadProductForEdit() {
+            const { data: product, error } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('id', productId)
+                .single();
+
+            if (error || !product) {
+                alert('No se pudo cargar el producto para editar.');
+                window.location.href = 'admin.html';
+                return;
+            }
+
+            document.getElementById('product-name').value = product.name;
+            document.getElementById('product-description').value = product.description;
+            document.getElementById('price').value = product.price;
+            document.getElementById('category').value = product.category_id;
+        }
+
+        // Guardar cambios
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const updatedData = {
+                name: document.getElementById('product-name').value,
+                description: document.getElementById('product-description').value,
+                price: document.getElementById('price').value,
+                category_id: document.getElementById('category').value,
+            };
+
+            const { error } = await supabaseClient
+                .from('products')
+                .update(updatedData)
+                .eq('id', productId);
+
+            if (error) {
+                alert('Error al guardar los cambios.');
+                console.error(error);
+            } else {
+                alert('Producto actualizado exitosamente.');
+                // Aquí llamaríamos a la Edge Function
+                // supabaseClient.functions.invoke('send-product-status-email', { body: { productId, status: 'edited' } });
+                window.location.href = 'admin.html';
+            }
+        });
+
+        loadProductForEdit();
+
+        // Lógica para los botones de Suspender/Borrar
+        approvedProductsList.addEventListener('click', async (e) => {
+            const target = e.target;
+            const id = target.dataset.id;
+
+            if (target.classList.contains('suspend-btn')) {
+                const isSuspended = target.dataset.suspended === 'true';
+                const { error } = await supabaseClient.from('products').update({ is_suspended: !isSuspended }).eq('id', id);
+                if (error) {
+                    alert('Error al actualizar el estado del producto.');
+                } else {
+                    // Actualizar UI
+                    target.dataset.suspended = !isSuspended;
+                    target.textContent = !isSuspended ? 'Rehabilitar' : 'Suspender';
+                    document.querySelector(`#product-approved-${id} h3`).classList.toggle('suspended-text');
+                    // Notificar
+                    // supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
+                }
+            } else if (target.classList.contains('delete-btn')) {
+                if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
+                    const { error } = await supabaseClient.from('products').delete().eq('id', id);
+                    if (error) {
+                        alert('Error al borrar el producto.');
+                    } else {
+                        document.getElementById(`product-approved-${id}`).remove();
+                        // Notificar
+                        // supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
+                    }
+                }
+            }
+        });
+    }
+
 
     // Lógica para la página de configuración de pagos
     const payoutForm = document.getElementById('payout-form');

@@ -649,7 +649,41 @@ body {
 }
 
 
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--grey-color);
+    margin: 3rem 0;
+}
+
 /* --- Página de Admin --- */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background-color: var(--white-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.stat-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #555;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
 .pending-product-item {
     background-color: var(--white-color);
     padding: 1.5rem;
@@ -663,6 +697,11 @@ body {
 
 .pending-product-info h3 {
     margin: 0 0 10px 0;
+}
+
+.suspended-text {
+    text-decoration: line-through;
+    color: #999;
 }
 
 .pending-product-actions .btn {

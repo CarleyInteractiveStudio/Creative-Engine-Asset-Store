@@ -59,6 +59,18 @@ serve(async (req) => {
         <p><em>${reason || "No se ha especificado un motivo."}</em></p>
         <p>Puedes realizar los cambios necesarios y volver a subir tu producto para una nueva revisión desde tu panel de vendedor.</p>
       `;
+    } else if (status === "edited") {
+        subject = `Tu producto "${productName}" ha sido editado por un administrador`;
+        htmlBody = `<h1>Producto Editado</h1><p>Un administrador ha realizado cambios en tu producto, <strong>${productName}</strong>. Por favor, revisa los cambios en tu panel.</p>`;
+    } else if (status === "suspended") {
+        subject = `Tu producto "${productName}" ha sido suspendido`;
+        htmlBody = `<h1>Producto Suspendido</h1><p>Tu producto, <strong>${productName}</strong>, ha sido suspendido temporalmente y no está visible en la tienda. Contacta con soporte para más información.</p>`;
+    } else if (status === "unsuspended") {
+        subject = `Tu producto "${productName}" ha sido rehabilitado`;
+        htmlBody = `<h1>Producto Rehabilitado</h1><p>Tu producto, <strong>${productName}</strong>, ha sido rehabilitado y vuelve a estar visible en la tienda.</p>`;
+    } else if (status === "deleted") {
+        subject = `Tu producto "${productName}" ha sido eliminado`;
+        htmlBody = `<h1>Producto Eliminado</h1><p>Tu producto, <strong>${productName}</strong>, ha sido eliminado de la tienda por un administrador.</p>`;
     } else {
       throw new Error("Invalid status provided.");
     }
