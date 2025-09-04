@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Vendedor - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html">Scripts</a></li>
+                <li><a href="category.html">Modelos 2D</a></li>
+                <li><a href="category.html">Escenas</a></li>
+                <li><a href="category.html">Sonidos</a></li>
+                <li><a href="category.html">UI</a></li>
+                <li><a href="category.html">Efectos</a></li>
+                <li><a href="category.html">Texturas</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <!-- Esto será reemplazado por JS -->
+            <a href="login.html" class="btn btn-secondary">Iniciar Sesión</a>
+            <a href="register.html" class="btn btn-primary">Registrarse</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-header">
+            <h1>Panel de Vendedor</h1>
+            <a href="upload.html" class="btn btn-primary">Subir Nuevo Producto</a>
+        </div>
+        <div class="product-list-container">
+            <h2>Mis Productos</h2>
+            <div id="product-list">
+                <!-- La lista de productos se cargará aquí con JS -->
+                <p>Cargando productos...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

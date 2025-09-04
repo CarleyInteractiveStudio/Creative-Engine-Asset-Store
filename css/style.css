@@ -445,6 +445,38 @@ body {
 .category-grid .category-card:nth-child(8) { animation-delay: 0.8s; }
 
 
+/* --- Página de Subida --- */
+.upload-form-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    background-color: var(--white-color);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.upload-form-layout h1 {
+    grid-column: 1 / -1; /* El título abarca todas las columnas */
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.form-section .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-section textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--grey-color);
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+
 /* --- Pie de Página --- */
 .main-footer {
     background-color: var(--secondary-color);

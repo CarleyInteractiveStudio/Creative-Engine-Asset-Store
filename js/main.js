@@ -147,13 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUserUI(user) {
         if (user) {
             // Usuario está logueado
-            userActionsDiv.innerHTML = `
-                <a href="#" id="logout-btn" class="btn btn-secondary">Cerrar Sesión</a>
-            `;
+            let dashboardLink = '<a href="dashboard.html" class="btn btn-primary">Mi Panel</a>';
             if (sessionStorage.getItem('is_developer_gate_passed') === 'true') {
                 console.log("Sesión de desarrollador activa.");
-                // Aquí se podría añadir un enlace al panel de admin, etc.
+                // Si es desarrollador, podría tener un panel de admin en lugar de vendedor
+                // dashboardLink = '<a href="admin.html" class="btn btn-primary">Panel de Admin</a>';
             }
+
+            userActionsDiv.innerHTML = `
+                ${dashboardLink}
+                <a href="#" id="logout-btn" class="btn btn-secondary">Cerrar Sesión</a>
+            `;
             setupLogoutButton();
         } else {
             // Usuario no está logueado
@@ -169,4 +173,128 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = session?.user;
         updateUserUI(user);
     });
+
+    // Lógica para la página de subida de productos
+    const uploadForm = document.getElementById('upload-form');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                alert('Debes iniciar sesión para subir un producto.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const productName = e.target['product-name'].value;
+            const description = e.target['product-description'].value;
+            const price = e.target.price.value;
+            const categoryId = e.target.category.value;
+            const youtubeUrl = e.target['youtube-link'].value;
+            const mainFile = e.target['product-file'].files[0];
+            const images = e.target['product-images'].files;
+
+            if (!mainFile || images.length === 0) {
+                alert('Debes seleccionar el archivo principal y al menos una imagen.');
+                return;
+            }
+
+            if (images.length > 3) {
+                alert('Puedes subir un máximo de 3 imágenes.');
+                return;
+            }
+
+            // --- Lógica de Subida ---
+            try {
+                // 1. Subir archivo principal
+                const timestamp = Date.now();
+                const mainFilePath = `${user.id}/${timestamp}-${mainFile.name}`;
+                const { error: mainFileError } = await supabaseClient.storage
+                    .from('product_files')
+                    .upload(mainFilePath, mainFile);
+                if (mainFileError) throw mainFileError;
+
+                const { data: { publicUrl: mainFileUrl } } = supabaseClient.storage.from('product_files').getPublicUrl(mainFilePath);
+
+                // 2. Insertar en la tabla 'products'
+                const { data: productData, error: productError } = await supabaseClient
+                    .from('products')
+                    .insert({
+                        name: productName,
+                        description: description,
+                        price: price,
+                        category_id: categoryId,
+                        youtube_url: youtubeUrl,
+                        seller_id: user.id,
+                        main_file_url: mainFileUrl,
+                        status: 'pending'
+                    })
+                    .select()
+                    .single();
+                if (productError) throw productError;
+
+                // 3. Subir imágenes y guardar en 'product_images'
+                for (const image of images) {
+                    const imagePath = `${user.id}/${productData.id}/${image.name}`;
+                    const { error: imageError } = await supabaseClient.storage
+                        .from('product_images')
+                        .upload(imagePath, image);
+                    if (imageError) throw imageError;
+
+                    const { data: { publicUrl: imageUrl } } = supabaseClient.storage.from('product_images').getPublicUrl(imagePath);
+
+                    const { error: productImageError } = await supabaseClient
+                        .from('product_images')
+                        .insert({ product_id: productData.id, image_url: imageUrl });
+                    if(productImageError) throw productImageError;
+                }
+
+                alert('¡Producto subido exitosamente! Será revisado por un administrador.');
+                window.location.href = 'dashboard.html';
+
+            } catch (error) {
+                console.error('Error al subir el producto:', error);
+                alert(`Error al subir el producto: ${error.message}`);
+            }
+        });
+    }
+
+    // Lógica para la página de dashboard
+    const productListDiv = document.getElementById('product-list');
+    if (productListDiv) {
+        async function loadUserProducts() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const { data: products, error } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('seller_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error al cargar los productos:', error);
+                productListDiv.innerHTML = '<p class="error">No se pudieron cargar tus productos.</p>';
+                return;
+            }
+
+            if (products.length === 0) {
+                productListDiv.innerHTML = '<p>No has subido ningún producto todavía.</p>';
+                return;
+            }
+
+            let productHTML = '<ul>';
+            for (const product of products) {
+                productHTML += `<li>${product.name} - <strong>Estado:</strong> ${product.status}</li>`;
+            }
+            productHTML += '</ul>';
+            productListDiv.innerHTML = productHTML;
+        }
+
+        loadUserProducts();
+    }
 });
