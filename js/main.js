@@ -147,18 +147,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateUserUI(user) {
+    async function updateUserUI(user) {
         if (!configDropdown) return;
 
         let dropdownHTML = '';
         if (user) {
             // Usuario está logueado
+            const { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('points')
+                .eq('id', user.id)
+                .single();
+
+            const userPoints = error ? 0 : profile.points;
+
             let adminLink = '';
             if (sessionStorage.getItem('is_developer_gate_passed') === 'true') {
                 adminLink = '<a href="admin.html">Panel de Admin</a>';
             }
 
             dropdownHTML = `
+                <div class="dropdown-points">Puntos: <strong>${userPoints}</strong></div>
+                <hr class="dropdown-divider">
                 <a href="my-assets.html">Mis Assets</a>
                 <a href="dashboard.html">Mi Panel (Vendedor)</a>
                 ${adminLink}
@@ -849,6 +859,76 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.body.addEventListener('click', handleGetFreeClick);
+
+    async function handleBuyWithPoints(e) {
+        const button = e.target.closest('.btn-buy-points');
+        if (!button) return;
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Debes iniciar sesión para usar tus puntos.');
+            return;
+        }
+
+        const price = parseFloat(button.dataset.price);
+        const pointCost = price * 100;
+
+        const { data: profile } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
+        if (profile.points < pointCost) {
+            alert('No tienes suficientes puntos para comprar este asset.');
+            return;
+        }
+
+        if (confirm(`¿Estás seguro de que quieres gastar ${pointCost} puntos en este asset?`)) {
+            const newPoints = profile.points - pointCost;
+            const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
+            if (updateError) {
+                alert('Error al actualizar tus puntos.');
+                return;
+            }
+
+            const productId = button.dataset.productId;
+            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: `Comprado producto #${productId}` });
+            await supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: price });
+
+            alert('¡Compra con puntos exitosa! El asset ha sido añadido a tu colección.');
+            button.textContent = 'En tu colección';
+            button.disabled = true;
+            document.querySelector('.btn-buy').style.display = 'none';
+        }
+    }
+    document.body.addEventListener('click', handleBuyWithPoints);
+
+    // Lógica para simular ganar puntos
+    const earnPointsBtn = document.getElementById('earn-points-btn');
+    if(earnPointsBtn) {
+        earnPointsBtn.addEventListener('click', async () => {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                alert('Debes iniciar sesión para ganar puntos.');
+                return;
+            }
+
+            // En una DB real, esto se haría con una RPC para ser una operación atómica
+            // Por ahora, leemos y luego escribimos.
+            const { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
+            if(fetchError) {
+                alert('Error al obtener tu perfil.');
+                return;
+            }
+
+            const newPoints = profile.points + 5;
+            const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
+
+            if(updateError) {
+                alert('Error al añadir puntos.');
+            } else {
+                await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: 5, description: 'Vio un anuncio de prueba' });
+                alert('¡Has ganado 5 puntos!');
+                updateUserUI(user); // Actualizar la UI para mostrar el nuevo saldo
+            }
+        });
+    }
 
     // --- Lógica de la Lista de Deseos ---
     async function handleWishlistClick(e) {

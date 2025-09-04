@@ -113,6 +113,18 @@ a {
     background-color: var(--background-color);
 }
 
+.dropdown-points {
+    padding: 12px 20px;
+    font-weight: bold;
+    color: #555;
+}
+
+.dropdown-divider {
+    border: none;
+    border-top: 1px solid var(--grey-color);
+    margin: 0;
+}
+
 .main-header .user-actions .btn {
     padding: 10px 20px;
     border-radius: 5px;
@@ -569,6 +581,13 @@ body {
     font-size: inherit;
 }
 
+
+.page-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
 
 /* --- Pestañas (Tabs) --- */
 .tabs {
