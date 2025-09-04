@@ -1,4 +1,4 @@
-// Scripts para la Creative Engine Store
+// Scripts para la Creative Engine Asset Store
 
 // Initialize the Supabase client
 const { createClient } = supabase;
@@ -7,7 +7,7 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Creative Engine Store script cargado.");
+    console.log("Creative Engine Asset Store script cargado.");
 
     // Lógica para la página de inicio de sesión
     const standardLoginForm = document.getElementById('standard-login-form');
@@ -39,12 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2. Comprobar el atajo de teclado
         document.addEventListener('keydown', (e) => {
-            // Ctrl + Shift + D + C
-            if (e.ctrlKey && e.shiftKey && e.key === 'D' && !e.repeat) {
+            // Shift + D + C
+            if (e.shiftKey && !e.ctrlKey && e.key === 'D' && !e.repeat) { // Se quitó e.ctrlKey
                 // Prevenir que se active repetidamente si se mantiene presionado
                  e.preventDefault();
                  document.addEventListener('keydown', (e2) => {
-                     if(e2.key == 'C' && e.ctrlKey && e.shiftKey){
+                     if(e2.key == 'C' && e.shiftKey && !e.ctrlKey){ // Se quitó e.ctrlKey
                         e.preventDefault();
                         showDevForm();
                      }
