@@ -281,6 +281,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // --- Cargar Resumen de Ganancias (Simulado) ---
+            const earningsDiv = document.getElementById('earnings-data');
+            // Simular ventas para este usuario
+            const simulatedSales = [
+                { price: 10.00 }, { price: 25.00 }, { price: 5.00 }, { price: 12.00 }
+            ];
+            const totalRevenue = simulatedSales.reduce((sum, sale) => sum + sale.price, 0);
+            let commissionRate = 0.10;
+            if (totalRevenue > 500) {
+                commissionRate = 0.20;
+            } else if (totalRevenue > 100) {
+                commissionRate = 0.15;
+            }
+            const commissionAmount = totalRevenue * commissionRate;
+            const netPayout = totalRevenue - commissionAmount;
+
+            earningsDiv.innerHTML = `
+                <div class="earning-item">Ingresos Totales: <strong>$${totalRevenue.toFixed(2)}</strong></div>
+                <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-$${commissionAmount.toFixed(2)}</strong></div>
+                <div class="earning-item">Pago Neto Estimado: <strong>$${netPayout.toFixed(2)}</strong></div>
+                <div class="earning-item">Próximo Día de Pago: <strong>Fin de mes</strong></div>
+            `;
+
+
             const { data: products, error } = await supabaseClient
                 .from('products')
                 .select('*')
@@ -307,6 +331,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadUserProducts();
+    }
+
+    // Lógica para la página de configuración de pagos
+    const payoutForm = document.getElementById('payout-form');
+    if (payoutForm) {
+        const emailInput = document.getElementById('paypal-email');
+
+        async function loadPayoutSettings() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('paypal_email')
+                .eq('id', user.id)
+                .single();
+
+            if (error) {
+                console.error('Error al cargar la configuración de pago:', error);
+            } else if (data && data.paypal_email) {
+                emailInput.value = data.paypal_email;
+            }
+        }
+
+        payoutForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return;
+
+            const newEmail = emailInput.value;
+            const { error } = await supabaseClient
+                .from('profiles')
+                .update({ paypal_email: newEmail })
+                .eq('id', user.id);
+
+            if (error) {
+                alert('Error al guardar la configuración.');
+                console.error(error);
+            } else {
+                alert('¡Configuración de pago guardada exitosamente!');
+            }
+        });
+
+        loadPayoutSettings();
     }
 
     // Lógica para la página "Mis Assets" - Pestaña Lista de Deseos
@@ -350,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">$${product.price.toFixed(2)}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
                         </div>
                     </div>
                 `;
@@ -418,6 +489,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (price === 0) {
             buyButton.style.display = 'none';
             freeButton.style.display = 'inline-block';
+            // Actualizar también el texto del precio
+            const priceDisplay = document.querySelector('.product-info-panel .product-price');
+            if (priceDisplay) {
+                priceDisplay.textContent = 'Gratis';
+            }
         }
     }
 

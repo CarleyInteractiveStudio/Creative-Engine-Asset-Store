@@ -607,6 +607,48 @@ body {
 }
 
 
+/* --- Dashboard --- */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.product-list-container {
+    background-color: var(--white-color);
+    padding: 2rem;
+    border-radius: 8px;
+}
+
+.earnings-summary {
+    background-color: #e8f5e9; /* Un verde claro */
+    color: #2e7d32; /* Un verde oscuro */
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.earnings-summary h2 {
+    margin-top: 0;
+}
+
+.earnings-summary .earning-item {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.earnings-summary .earning-item strong {
+    color: #1b5e20; /* Un verde aún más oscuro */
+}
+
+
 /* --- Pie de Página --- */
 .main-footer {
     background-color: var(--secondary-color);
