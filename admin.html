@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <script>
+        // Guarda de acceso de cliente
+        if (sessionStorage.getItem('is_developer_gate_passed') !== 'true') {
+            alert('Acceso denegado. Debes ser un administrador para ver esta página.');
+            window.location.href = 'index.html';
+        }
+    </script>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html">Scripts</a></li>
+                <li><a href="category.html">Modelos 2D</a></li>
+                <li><a href="category.html">Escenas</a></li>
+                <li><a href="category.html">Sonidos</a></li>
+                <li><a href="category.html">UI</a></li>
+                <li><a href="category.html">Efectos</a></li>
+                <li><a href="category.html">Texturas</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown" style="display: none;">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Panel de Administración</h1>
+        <h2>Productos Pendientes de Revisión</h2>
+        <div id="pending-products-list">
+            <!-- La lista de productos pendientes se cargará aquí -->
+            <p>Cargando productos pendientes...</p>
+        </div>
+    </main>
+
+    <!-- Modal para Razón de Rechazo -->
+    <div id="rejection-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3>Razón del Rechazo</h3>
+            <textarea id="rejection-reason-text" rows="4"></textarea>
+            <button id="submit-rejection-btn" class="btn btn-primary">Enviar Rechazo</button>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -153,12 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let dropdownHTML = '';
         if (user) {
             // Usuario está logueado
+            let adminLink = '';
+            if (sessionStorage.getItem('is_developer_gate_passed') === 'true') {
+                adminLink = '<a href="admin.html">Panel de Admin</a>';
+            }
+
             dropdownHTML = `
                 <a href="my-assets.html">Mis Assets</a>
                 <a href="dashboard.html">Mi Panel (Vendedor)</a>
+                ${adminLink}
                 <a href="#" id="logout-btn">Cerrar Sesión</a>
             `;
-            // Nota: "Mis Assets" es la nueva página con Carrito, Deseos, etc.
         } else {
             // Usuario no está logueado
             dropdownHTML = `
@@ -331,6 +336,174 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadUserProducts();
+    }
+
+    // Lógica para la página de Admin
+    const pendingProductsList = document.getElementById('pending-products-list');
+    if (pendingProductsList) {
+        async function loadPendingProducts() {
+            const { data: products, error } = await supabaseClient
+                .from('products')
+                .select(`
+                    id,
+                    name,
+                    price,
+                    profiles ( id, username )
+                `)
+                .eq('status', 'pending');
+
+            if (error) {
+                console.error('Error cargando productos pendientes:', error);
+                pendingProductsList.innerHTML = '<p class="error">No se pudieron cargar los productos.</p>';
+                return;
+            }
+
+            if (products.length === 0) {
+                pendingProductsList.innerHTML = '<p>No hay productos pendientes de revisión.</p>';
+                return;
+            }
+
+            let productHTML = '';
+            for (const product of products) {
+                productHTML += `
+                    <div class="pending-product-item" id="product-${product.id}">
+                        <div class="pending-product-info">
+                            <h3>${product.name}</h3>
+                            <p>Vendedor: ${product.profiles.username || 'N/A'} | Precio: $${product.price.toFixed(2)}</p>
+                        </div>
+                        <div class="pending-product-actions">
+                            <button class="btn btn-primary approve-btn" data-id="${product.id}">Aprobar</button>
+                            <button class="btn btn-secondary reject-btn" data-id="${product.id}">Rechazar</button>
+                        </div>
+                    </div>
+                `;
+            }
+            pendingProductsList.innerHTML = productHTML;
+        }
+
+        // Lógica para los botones de Aprobar/Rechazar y el modal
+        const modal = document.getElementById('rejection-modal');
+        const closeModalBtn = modal.querySelector('.close-btn');
+        const submitRejectionBtn = modal.querySelector('#submit-rejection-btn');
+        const rejectionReasonText = modal.querySelector('#rejection-reason-text');
+        let currentRejectingProductId = null;
+
+        closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+
+        async function handleApproval(productId) {
+            const { error } = await supabaseClient.from('products').update({ status: 'approved' }).eq('id', productId);
+            if (error) {
+                alert('Error al aprobar el producto.');
+                console.error(error);
+            } else {
+                document.getElementById(`product-${productId}`).remove();
+                // Aquí llamaríamos a la Edge Function de notificación
+                // supabaseClient.functions.invoke('send-product-status-email', { body: { productId, status: 'approved' } });
+            }
+        }
+
+        async function handleRejection(productId, reason) {
+            const { error } = await supabaseClient.from('products').update({ status: 'rejected', rejection_reason: reason }).eq('id', productId);
+             if (error) {
+                alert('Error al rechazar el producto.');
+                console.error(error);
+            } else {
+                modal.style.display = 'none';
+                document.getElementById(`product-${productId}`).remove();
+                // Aquí llamaríamos a la Edge Function de notificación
+                // supabaseClient.functions.invoke('send-product-status-email', { body: { productId, status: 'rejected', reason } });
+            }
+        }
+
+        pendingProductsList.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.classList.contains('approve-btn')) {
+                handleApproval(target.dataset.id);
+            } else if (target.classList.contains('reject-btn')) {
+                currentRejectingProductId = target.dataset.id;
+                rejectionReasonText.value = '';
+                modal.style.display = 'block';
+            }
+        });
+
+        submitRejectionBtn.addEventListener('click', () => {
+            const reason = rejectionReasonText.value;
+            if (!reason) {
+                alert('Por favor, introduce un motivo para el rechazo.');
+                return;
+            }
+            handleRejection(currentRejectingProductId, reason);
+        });
+
+
+        loadPendingProducts();
+    }
+
+    // Lógica para cargar productos en la página de inicio
+    const featuredAssetGrid = document.querySelector('#featured .asset-grid');
+    if (featuredAssetGrid) {
+        async function loadFeaturedProducts() {
+            const { data: products, error } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('status', 'approved')
+                .limit(4);
+
+            if (error) {
+                console.error('Error cargando productos destacados:', error);
+                return;
+            }
+
+            let productHTML = '';
+            for (const product of products) {
+                 productHTML += `
+                    <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            featuredAssetGrid.innerHTML = productHTML || '<p>No hay productos destacados en este momento.</p>';
+        }
+        loadFeaturedProducts();
+    }
+
+    // Lógica para cargar productos en la página de categoría
+    const categoryAssetGrid = document.querySelector('.category-content .asset-grid');
+    if (categoryAssetGrid) {
+        async function loadCategoryProducts() {
+            // NOTA: En una app real, aquí se obtendría la categoría de la URL
+            // y se filtraría por ella. Por ahora, cargamos todos los aprobados.
+            const { data: products, error } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('status', 'approved');
+
+            if (error) {
+                console.error('Error cargando productos de categoría:', error);
+                return;
+            }
+
+            let productHTML = '';
+            for (const product of products) {
+                 productHTML += `
+                    <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            categoryAssetGrid.innerHTML = productHTML || '<p>No hay productos en esta categoría.</p>';
+        }
+        loadCategoryProducts();
     }
 
     // Lógica para la página de configuración de pagos
