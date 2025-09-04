@@ -25,8 +25,12 @@
             </ul>
         </nav>
         <div class="user-actions">
-            <a href="login.html" class="btn btn-secondary">Iniciar Sesión</a>
-            <a href="register.html" class="btn btn-primary">Registrarse</a>
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown" style="display: none;">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
         </div>
     </header>
 
@@ -44,6 +48,7 @@
             <div class="asset-grid">
                 <!-- Placeholder Asset 1 -->
                 <div class="asset-card">
+                    <button class="wishlist-btn" data-product-id="1">❤️</button>
                     <img src="https://via.placeholder.com/300x200.png?text=Asset+1" alt="Asset 1" class="asset-image">
                     <div class="asset-info">
                         <h3 class="asset-title">Paquete de Personajes 2D</h3>
@@ -53,6 +58,7 @@
                 </div>
                 <!-- Placeholder Asset 2 -->
                 <div class="asset-card">
+                    <button class="wishlist-btn" data-product-id="2">❤️</button>
                     <img src="https://via.placeholder.com/300x200.png?text=Asset+2" alt="Asset 2" class="asset-image">
                     <div class="asset-info">
                         <h3 class="asset-title">Sistema de Diálogo Avanzado</h3>
@@ -62,6 +68,7 @@
                 </div>
                 <!-- Placeholder Asset 3 -->
                 <div class="asset-card">
+                    <button class="wishlist-btn" data-product-id="3">❤️</button>
                     <img src="https://via.placeholder.com/300x200.png?text=Asset+3" alt="Asset 3" class="asset-image">
                     <div class="asset-info">
                         <h3 class="asset-title">Efectos de Partículas Mágicas</h3>
@@ -71,6 +78,7 @@
                 </div>
                 <!-- Placeholder Asset 4 -->
                 <div class="asset-card">
+                    <button class="wishlist-btn" data-product-id="4">❤️</button>
                     <img src="https://via.placeholder.com/300x200.png?text=Asset+4" alt="Asset 4" class="asset-image">
                     <div class="asset-info">
                         <h3 class="asset-title">Música de Fondo Orquestal</h3>

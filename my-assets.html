@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Vendedor - Creative Engine Asset Store</title>
+    <title>Mis Assets - Creative Engine Asset Store</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -35,15 +35,34 @@
     </header>
 
     <main class="container">
-        <div class="dashboard-header">
-            <h1>Panel de Vendedor</h1>
-            <a href="upload.html" class="btn btn-primary">Subir Nuevo Producto</a>
+        <h1>Mis Assets</h1>
+        <div class="tabs">
+            <button class="tab-link active" data-tab="compras">Mis Compras</button>
+            <button class="tab-link" data-tab="deseos">Lista de Deseos</button>
+            <button class="tab-link" data-tab="carrito">Carrito</button>
         </div>
-        <div class="product-list-container">
-            <h2>Mis Productos</h2>
-            <div id="product-list">
-                <!-- La lista de productos se cargará aquí con JS -->
-                <p>Cargando productos...</p>
+
+        <div id="compras" class="tab-content active">
+            <h2>Mis Compras</h2>
+            <div id="purchased-assets-list">
+                <!-- Assets comprados se cargarán aquí -->
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <div id="deseos" class="tab-content">
+            <h2>Lista de Deseos</h2>
+            <div id="wishlist-assets-list">
+                <!-- Assets en lista de deseos se cargarán aquí -->
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <div id="carrito" class="tab-content">
+            <h2>Carrito</h2>
+            <div id="cart-assets-list">
+                <!-- Assets en el carrito se cargarán aquí -->
+                <p>Tu carrito está vacío.</p>
             </div>
         </div>
     </main>

@@ -132,40 +132,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Gestión de la Sesión y UI ---
-    const userActionsDiv = document.querySelector('.user-actions');
+    const configBtn = document.getElementById('config-btn');
+    const configDropdown = document.getElementById('config-dropdown');
 
-    function setupLogoutButton() {
-        const logoutButton = document.getElementById('logout-btn');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', async () => {
-                await supabaseClient.auth.signOut();
-                // onAuthStateChange se encargará de actualizar la UI
-            });
-        }
+    if (configBtn && configDropdown) {
+        configBtn.addEventListener('click', () => {
+            configDropdown.style.display = configDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (!configBtn.contains(e.target) && !configDropdown.contains(e.target)) {
+                configDropdown.style.display = 'none';
+            }
+        });
     }
 
     function updateUserUI(user) {
+        if (!configDropdown) return;
+
+        let dropdownHTML = '';
         if (user) {
             // Usuario está logueado
-            let dashboardLink = '<a href="dashboard.html" class="btn btn-primary">Mi Panel</a>';
-            if (sessionStorage.getItem('is_developer_gate_passed') === 'true') {
-                console.log("Sesión de desarrollador activa.");
-                // Si es desarrollador, podría tener un panel de admin en lugar de vendedor
-                // dashboardLink = '<a href="admin.html" class="btn btn-primary">Panel de Admin</a>';
-            }
-
-            userActionsDiv.innerHTML = `
-                ${dashboardLink}
-                <a href="#" id="logout-btn" class="btn btn-secondary">Cerrar Sesión</a>
+            dropdownHTML = `
+                <a href="my-assets.html">Mis Assets</a>
+                <a href="dashboard.html">Mi Panel (Vendedor)</a>
+                <a href="#" id="logout-btn">Cerrar Sesión</a>
             `;
-            setupLogoutButton();
+            // Nota: "Mis Assets" es la nueva página con Carrito, Deseos, etc.
         } else {
             // Usuario no está logueado
-            userActionsDiv.innerHTML = `
-                <a href="login.html" class="btn btn-secondary">Iniciar Sesión</a>
-                <a href="register.html" class="btn btn-primary">Registrarse</a>
+            dropdownHTML = `
+                <a href="login.html">Iniciar Sesión</a>
+                <a href="register.html">Registrarse</a>
             `;
             sessionStorage.removeItem('is_developer_gate_passed');
+        }
+        configDropdown.innerHTML = dropdownHTML;
+
+        // Añadir listener al botón de logout si existe
+        const logoutButton = document.getElementById('logout-btn');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await supabaseClient.auth.signOut();
+                // onAuthStateChange se encargará de recargar la UI
+            });
         }
     }
 
@@ -296,5 +307,222 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadUserProducts();
+    }
+
+    // Lógica para la página "Mis Assets" - Pestaña Lista de Deseos
+    const wishlistDiv = document.getElementById('wishlist-assets-list');
+    if(wishlistDiv) {
+        async function loadWishlist() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('wishlist_items')
+                .select(`
+                    products (
+                        id,
+                        name,
+                        price
+                    )
+                `)
+                .eq('user_id', user.id);
+
+            if (error) {
+                console.error('Error al cargar la lista de deseos:', error);
+                wishlistDiv.innerHTML = '<p class="error">No se pudo cargar tu lista de deseos.</p>';
+                return;
+            }
+
+            if (data.length === 0) {
+                wishlistDiv.innerHTML = '<p>Tu lista de deseos está vacía.</p>';
+                return;
+            }
+
+            let productHTML = '<div class="asset-grid">';
+            for (const item of data) {
+                const product = item.products;
+                productHTML += `
+                    <div class="asset-card">
+                        <button class="wishlist-btn active" data-product-id="${product.id}">❤️</button>
+                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <p class="asset-price">$${product.price.toFixed(2)}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            productHTML += '</div>';
+            wishlistDiv.innerHTML = productHTML;
+        }
+
+        loadWishlist();
+    }
+
+    // Lógica para la página "Mis Assets" - Pestaña Mis Compras
+    const purchasedDiv = document.getElementById('purchased-assets-list');
+    if(purchasedDiv) {
+        async function loadPurchasedAssets() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('user_owned_assets')
+                .select('products(*)')
+                .eq('user_id', user.id);
+
+            if (error) {
+                console.error('Error al cargar los assets comprados:', error);
+                purchasedDiv.innerHTML = '<p class="error">No se pudieron cargar tus assets.</p>';
+                return;
+            }
+
+            if (data.length === 0) {
+                purchasedDiv.innerHTML = '<p>No has comprado u obtenido ningún asset todavía.</p>';
+                return;
+            }
+
+            let productHTML = '<div class="asset-grid">';
+            for (const item of data) {
+                const product = item.products;
+                productHTML += `
+                    <div class="asset-card">
+                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <p class="asset-price">Obtenido</p>
+                        </div>
+                    </div>
+                `;
+            }
+            productHTML += '</div>';
+            purchasedDiv.innerHTML = productHTML;
+        }
+
+        loadPurchasedAssets();
+    }
+
+    // Lógica para mostrar el botón correcto en la página de producto
+    const productActions = document.querySelector('.product-actions');
+    if (productActions) {
+        const buyButton = productActions.querySelector('.btn-buy');
+        const freeButton = productActions.querySelector('.btn-get-free');
+        const price = parseFloat(buyButton.dataset.price);
+
+        if (price === 0) {
+            buyButton.style.display = 'none';
+            freeButton.style.display = 'inline-block';
+        }
+    }
+
+    // --- Lógica de Obtener Gratis y Comprar ---
+    async function handleGetFreeClick(e) {
+        const button = e.target.closest('.btn-get-free');
+        if (!button) return;
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Debes iniciar sesión para obtener un asset.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const productId = button.dataset.productId;
+
+        const { error } = await supabaseClient
+            .from('user_owned_assets')
+            .insert({ user_id: user.id, product_id: productId, purchase_price: 0 });
+
+        if (error) {
+            console.error('Error al obtener el asset gratuito:', error);
+            alert('Hubo un error al obtener el asset.');
+        } else {
+            alert('¡Asset añadido a tu colección!');
+            button.textContent = 'En tu colección';
+            button.disabled = true;
+        }
+    }
+
+    document.body.addEventListener('click', handleGetFreeClick);
+
+    // --- Lógica de la Lista de Deseos ---
+    async function handleWishlistClick(e) {
+        const button = e.target.closest('.wishlist-btn, .wishlist-btn-large');
+        if (!button) return;
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            alert('Debes iniciar sesión para añadir a tu lista de deseos.');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const productId = button.dataset.productId;
+
+        // Comprobar si ya existe
+        const { data: existing, error: checkError } = await supabaseClient
+            .from('wishlist_items')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('product_id', productId)
+            .maybeSingle();
+
+        if (checkError) {
+            console.error('Error al comprobar la lista de deseos:', checkError);
+            return;
+        }
+
+        if (existing) {
+            // Eliminar de la lista
+            const { error: deleteError } = await supabaseClient
+                .from('wishlist_items')
+                .delete()
+                .match({ id: existing.id });
+            if (deleteError) {
+                console.error('Error al eliminar de la lista de deseos:', deleteError);
+            } else {
+                button.classList.remove('active');
+            }
+        } else {
+            // Añadir a la lista
+            const { error: insertError } = await supabaseClient
+                .from('wishlist_items')
+                .insert({ user_id: user.id, product_id: productId });
+            if (insertError) {
+                console.error('Error al añadir a la lista de deseos:', insertError);
+            } else {
+                button.classList.add('active');
+            }
+        }
+    }
+
+    document.body.addEventListener('click', handleWishlistClick);
+
+
+    // Lógica para las pestañas en my-assets.html
+    const tabs = document.querySelector('.tabs');
+    if (tabs) {
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const tabId = link.getAttribute('data-tab');
+
+                // Desactivar todos
+                tabLinks.forEach(item => item.classList.remove('active'));
+                tabContents.forEach(item => item.classList.remove('active'));
+
+                // Activar el correcto
+                link.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
     }
 });

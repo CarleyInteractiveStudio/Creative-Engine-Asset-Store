@@ -25,8 +25,12 @@
             </ul>
         </nav>
         <div class="user-actions">
-            <a href="login.html" class="btn btn-secondary">Iniciar Sesión</a>
-            <a href="register.html" class="btn btn-primary">Registrarse</a>
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown" style="display: none;">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
         </div>
     </header>
 
@@ -46,7 +50,12 @@
                 <h1 class="product-title">Sistema de Diálogo Avanzado</h1>
                 <div class="product-author">por <a href="#">ScriptMaster</a></div>
                 <div class="product-price">$10.00</div>
-                <button class="btn btn-primary btn-large btn-buy">Comprar</button>
+                <div class="product-actions">
+                    <!-- JS mostrará 'Comprar' o 'Obtener Gratis' según el precio -->
+                    <button class="btn btn-primary btn-large btn-buy" data-product-id="2" data-price="10.00">Comprar</button>
+                    <button class="btn btn-primary btn-large btn-get-free" data-product-id="2" style="display: none;">Obtener Gratis</button>
+                    <button class="wishlist-btn-large" data-product-id="2">❤️ Añadir a Lista de Deseos</button>
+                </div>
                 <div class="product-description">
                     <h2>Descripción</h2>
                     <p>Este es un sistema de diálogo increíblemente robusto y fácil de usar para Creative Engine. Permite crear conversaciones complejas con ramas, eventos y una integración perfecta con tu juego.</p>

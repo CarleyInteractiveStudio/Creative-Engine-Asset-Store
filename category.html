@@ -25,8 +25,12 @@
             </ul>
         </nav>
         <div class="user-actions">
-            <a href="login.html" class="btn btn-secondary">Iniciar Sesión</a>
-            <a href="register.html" class="btn btn-primary">Registrarse</a>
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown" style="display: none;">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
         </div>
     </header>
 
@@ -61,6 +65,7 @@
                 <div class="asset-grid">
                     <!-- Fila de Assets de Ejemplo -->
                     <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="5">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=Script+1" alt="Asset 1" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">Sistema de Inventario</h3>
@@ -69,6 +74,7 @@
                         </div>
                     </div>
                     <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="6">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=Script+2" alt="Asset 2" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">Controlador de Personaje</h3>
@@ -77,6 +83,7 @@
                         </div>
                     </div>
                     <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="7">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=Script+3" alt="Asset 3" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">IA de Enemigos</h3>
@@ -85,6 +92,7 @@
                         </div>
                     </div>
                     <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="8">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=Script+4" alt="Asset 4" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">Sistema de Guardado</h3>
@@ -93,6 +101,7 @@
                         </div>
                     </div>
                     <div class="asset-card">
+                        <button class="wishlist-btn" data-product-id="9">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=Script+5" alt="Asset 5" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">Gestor de Escenas</h3>
