@@ -1,5 +1,10 @@
 // Scripts para la Creative Engine Asset Store
 
+// Advertencia para el desarrollador sobre la configuración de PayPal
+if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
+    console.warn("ADVERTENCIA: El SDK de PayPal está usando un Client ID de prueba. Reemplaza 'YOUR_SANDBOX_CLIENT_ID' en product.html para que los pagos funcionen.");
+}
+
 // Initialize the Supabase client
 const { createClient } = supabase;
 const supabaseUrl = 'https://tladrluezsmmhjbhupgb.supabase.co';
@@ -62,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = e.target.email.value;
             const password = e.target.password.value;
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
+            const { data: signInData, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
@@ -70,6 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) {
                 alert(`Error al iniciar sesión: ${error.message}`);
             } else {
+                // Fetch profile data and store it in session storage
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('points')
+                    .eq('id', signInData.user.id)
+                    .single();
+
+                if (!profileError && profile) {
+                    sessionStorage.setItem('user_points', profile.points);
+                }
+
                 alert('¡Inicio de sesión exitoso!');
                 window.location.href = 'index.html'; // Redirigir a la página de inicio
             }
@@ -153,13 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let dropdownHTML = '';
         if (user) {
             // Usuario está logueado
-            const { data: profile, error } = await supabaseClient
-                .from('profiles')
-                .select('points')
-                .eq('id', user.id)
-                .single();
-
-            const userPoints = error ? 0 : profile.points;
+            const userPoints = sessionStorage.getItem('user_points') || 0;
 
             let adminLink = '';
             if (sessionStorage.getItem('is_developer_gate_passed') === 'true') {
@@ -296,6 +306,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // --- Cargar Historial de Pagos ---
+            const payoutHistoryList = document.getElementById('payout-history-list');
+            const { data: payouts, error: payoutError } = await supabaseClient
+                .from('payouts')
+                .select('*')
+                .eq('seller_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (payoutError) {
+                payoutHistoryList.innerHTML = '<p class="error">No se pudo cargar el historial de pagos.</p>';
+            } else if (payouts.length === 0) {
+                payoutHistoryList.innerHTML = '<p>No has recibido ningún pago todavía.</p>';
+            } else {
+                let historyHTML = '<ul>';
+                for (const payout of payouts) {
+                    historyHTML += `<li>${new Date(payout.created_at).toLocaleDateString()}: <strong>$${payout.amount.toFixed(2)}</strong> - Estado: ${payout.status}</li>`;
+                }
+                historyHTML += '</ul>';
+                payoutHistoryList.innerHTML = historyHTML;
+            }
+
             // --- Cargar Resumen de Ganancias (Simulado) ---
             const earningsDiv = document.getElementById('earnings-data');
             // Simular ventas para este usuario
@@ -424,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 document.getElementById(`product-${productId}`).remove();
                 // Aquí llamaríamos a la Edge Function de notificación
-                // supabaseClient.functions.invoke('send-product-status-email', { body: { productId, status: 'approved' } });
+                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'approved' } });
             }
         }
 
@@ -437,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.style.display = 'none';
                 document.getElementById(`product-${productId}`).remove();
                 // Aquí llamaríamos a la Edge Function de notificación
-                // supabaseClient.functions.invoke('send-product-status-email', { body: { productId, status: 'rejected', reason } });
+                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'rejected', reason: reason } });
             }
         }
 
@@ -572,6 +603,38 @@ document.addEventListener('DOMContentLoaded', () => {
             approvedProductsList.innerHTML = productHTML || '<p>No hay productos aprobados.</p>';
         }
         loadApprovedProducts();
+
+        // Lógica para los botones de Suspender/Borrar
+        approvedProductsList.addEventListener('click', async (e) => {
+            const target = e.target;
+            const id = target.dataset.id;
+
+            if (target.classList.contains('suspend-btn')) {
+                const isSuspended = target.dataset.suspended === 'true';
+                const { error } = await supabaseClient.from('products').update({ is_suspended: !isSuspended }).eq('id', id);
+                if (error) {
+                    alert('Error al actualizar el estado del producto.');
+                } else {
+                    // Actualizar UI
+                    target.dataset.suspended = !isSuspended;
+                    target.textContent = !isSuspended ? 'Rehabilitar' : 'Suspender';
+                    document.querySelector(`#product-approved-${id} h3`).classList.toggle('suspended-text');
+                    // Notificar
+                    supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
+                }
+            } else if (target.classList.contains('delete-btn')) {
+                if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
+                    const { error } = await supabaseClient.from('products').delete().eq('id', id);
+                    if (error) {
+                        alert('Error al borrar el producto.');
+                    } else {
+                        document.getElementById(`product-approved-${id}`).remove();
+                        // Notificar
+                        supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
+                    }
+                }
+            }
+        });
     }
 
     // Lógica para renderizar el botón de PayPal
@@ -669,44 +732,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 alert('Producto actualizado exitosamente.');
                 // Aquí llamaríamos a la Edge Function
-                // supabaseClient.functions.invoke('send-product-status-email', { body: { productId, status: 'edited' } });
+                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'edited' } });
                 window.location.href = 'admin.html';
             }
         });
 
         loadProductForEdit();
-
-        // Lógica para los botones de Suspender/Borrar
-        approvedProductsList.addEventListener('click', async (e) => {
-            const target = e.target;
-            const id = target.dataset.id;
-
-            if (target.classList.contains('suspend-btn')) {
-                const isSuspended = target.dataset.suspended === 'true';
-                const { error } = await supabaseClient.from('products').update({ is_suspended: !isSuspended }).eq('id', id);
-                if (error) {
-                    alert('Error al actualizar el estado del producto.');
-                } else {
-                    // Actualizar UI
-                    target.dataset.suspended = !isSuspended;
-                    target.textContent = !isSuspended ? 'Rehabilitar' : 'Suspender';
-                    document.querySelector(`#product-approved-${id} h3`).classList.toggle('suspended-text');
-                    // Notificar
-                    // supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
-                }
-            } else if (target.classList.contains('delete-btn')) {
-                if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
-                    const { error } = await supabaseClient.from('products').delete().eq('id', id);
-                    if (error) {
-                        alert('Error al borrar el producto.');
-                    } else {
-                        document.getElementById(`product-approved-${id}`).remove();
-                        // Notificar
-                        // supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
-                    }
-                }
-            }
-        });
     }
 
 
