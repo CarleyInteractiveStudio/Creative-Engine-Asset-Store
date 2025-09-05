@@ -574,6 +574,50 @@ document.addEventListener('DOMContentLoaded', () => {
         loadApprovedProducts();
     }
 
+    // Lógica para renderizar el botón de PayPal
+    const paypalButtonContainer = document.getElementById('paypal-button-container');
+    if (paypalButtonContainer) {
+        const productActions = document.querySelector('.product-actions');
+        const productId = productActions.querySelector('.btn-buy-points').dataset.productId;
+
+        if (typeof paypal !== 'undefined') {
+            paypal.Buttons({
+                async createOrder() {
+                    try {
+                        const { data, error } = await supabaseClient.functions.invoke('paypal-create-order', {
+                            body: { productId },
+                        });
+                        if (error) throw new Error(error.message);
+                        return data.orderID;
+                    } catch (err) {
+                        console.error('Error al crear la orden de PayPal:', err);
+                        alert('No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
+                    }
+                },
+                async onApprove(data) {
+                    try {
+                        const { data: responseData, error } = await supabaseClient.functions.invoke('paypal-capture-order', {
+                            body: { orderID: data.orderID, productId },
+                        });
+                        if (error) throw new Error(error.message);
+
+                        alert('¡Compra exitosa! El asset ha sido añadido a tu colección.');
+                        window.location.href = 'my-assets.html';
+                    } catch (err) {
+                        console.error('Error al capturar el pago de PayPal:', err);
+                        alert('Hubo un error al procesar tu pago. Por favor, contacta a soporte.');
+                    }
+                },
+                onError(err) {
+                    console.error('Error en el SDK de PayPal:', err);
+                    alert('Ocurrió un error inesperado con PayPal. Por favor, recarga la página.');
+                }
+            }).render('#paypal-button-container');
+        } else {
+            console.error('El SDK de PayPal no se ha cargado.');
+        }
+    }
+
     // Lógica para la página de edición de productos
     const editForm = document.getElementById('edit-form');
     if (editForm) {

@@ -6,6 +6,8 @@
     <title>Producto - Creative Engine Asset Store</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- NOTA: Reemplazar YOUR_SANDBOX_CLIENT_ID con tu Client ID de Sandbox de PayPal -->
+    <script src="https://www.paypal.com/sdk/js?client-id=YOUR_SANDBOX_CLIENT_ID&currency=USD"></script>
 </head>
 <body>
     <header class="main-header">
@@ -51,8 +53,10 @@
                 <div class="product-author">por <a href="#">ScriptMaster</a></div>
                 <div class="product-price">$10.00</div>
                 <div class="product-actions">
-                    <!-- JS mostrará 'Comprar' o 'Obtener Gratis' según el precio -->
-                    <button class="btn btn-primary btn-large btn-buy" data-product-id="2" data-price="10.00">Comprar ($10.00)</button>
+                    <!-- El botón de PayPal se renderizará aquí -->
+                    <div id="paypal-button-container"></div>
+
+                    <!-- Botones de Puntos y Gratis se mantienen, pero el de Comprar se va -->
                     <button class="btn btn-secondary btn-large btn-buy-points" data-product-id="2" data-price="10.00">Comprar (1000 Puntos)</button>
                     <button class="btn btn-primary btn-large btn-get-free" data-product-id="2" style="display: none;">Obtener Gratis</button>
                     <button class="wishlist-btn-large" data-product-id="2">❤️</button>
