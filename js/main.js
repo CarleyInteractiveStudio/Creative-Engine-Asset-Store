@@ -7,8 +7,8 @@ if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
 
 // Initialize the Supabase client
 const { createClient } = supabase;
-const supabaseUrl = 'https://tladrluezsmmhjbhupgb.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsYWRybHVlenNtbWhqYmh1cGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjY5NjQsImV4cCI6MjA3MTAwMjk2NH0.p7x3MPizmNdX57KzX5T4c15ytuH1oznjFqyp14HD-QU';
+const supabaseUrl = 'TU_SUPABASE_URL';
+const supabaseKey = 'TU_SUPABASE_KEY';
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1082,5 +1082,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
 
 
