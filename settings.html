@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Assets - Creative Engine Asset Store</title>
+    <title>Configuración - Creative Engine Asset Store</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -35,38 +35,20 @@
     </header>
 
     <main class="container">
-        <div class="page-header-actions">
-            <h1>Mis Assets</h1>
-            <button id="earn-points-btn" class="btn btn-secondary">Ver Anuncio de Prueba (+5 Puntos)</button>
-        </div>
-        <div class="tabs">
-            <button class="tab-link active" data-tab="compras">Mis Compras</button>
-            <button class="tab-link" data-tab="deseos">Lista de Deseos</button>
-            <button class="tab-link" data-tab="carrito">Carrito</button>
-        </div>
+        <h1>Configuración de la Cuenta</h1>
 
-        <div id="compras" class="tab-content active">
-            <h2>Mis Compras</h2>
-            <div id="purchased-assets-list">
-                <!-- Assets comprados se cargarán aquí -->
-                <p>Cargando...</p>
-            </div>
-        </div>
-
-        <div id="deseos" class="tab-content">
-            <h2>Lista de Deseos</h2>
-            <div id="wishlist-assets-list">
-                <!-- Assets en lista de deseos se cargarán aquí -->
-                <p>Cargando...</p>
-            </div>
-        </div>
-
-        <div id="carrito" class="tab-content">
-            <h2>Carrito</h2>
-            <div id="cart-assets-list">
-                <!-- Assets en el carrito se cargarán aquí -->
-                <p>Tu carrito está vacío.</p>
-            </div>
+        <div class="login-container">
+            <form id="settings-form">
+                <h3>Preferencias de Anuncios</h3>
+                <div class="form-group-toggle">
+                    <label for="ads-toggle">Mostrar anuncios para ganar puntos</label>
+                    <label class="switch">
+                        <input type="checkbox" id="ads-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </form>
         </div>
     </main>
 
@@ -75,6 +57,6 @@
     </footer>
 
     <script src="js/main.js"></script>
-    <script src="js/pages/my-assets.js"></script>
+    <script src="js/pages/settings.js"></script>
 </body>
 </html>
