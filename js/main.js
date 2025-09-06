@@ -102,11 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- SIMULACIÓN DE VERIFICACIÓN ---
             // NOTA: En un entorno de producción, esto DEBE hacerse en un Edge Function
             // para verificar de forma segura la contraseña hasheada sin exponerla.
-            // Por ahora, solo comprobaremos si el código existe.
+            // Ahora comprobamos tanto el código como la contraseña.
             const { data, error } = await supabaseClient
                 .from('dev_codes')
                 .select('code')
                 .eq('code', devCode)
+                .eq('password_text', devPassword)
                 .single(); // .single() devolverá un error si no se encuentra exactamente una fila
 
             if (error || !data) {
