@@ -3,10 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend";
 
 // NOTE: These environment variables would be set in the Supabase dashboard
-const RESEND_API_KEY = Deno.env.get("re_UswuVEkA_6SGw2sbjrp2iNe1KVPqGvQaR");
-const SUPABASE_URL = Deno.env.get("https://tladrluezsmmhjbhupgb.supabase.co");
-const SUPABASE_SERVICE_KEY = Deno.env.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsYWRybHVlenNtbWhqYmh1cGdiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTQyNjk2NCwiZXhwIjoyMDcxMDAyOTY0fQ.GtJCXxiVl1H2vMmnKa7TF6NY8lysOk2JE6veKZMDD2o");
-
+const RESEND_API_KEY = Deno.env.get("hjesfkbbfugbefncvutvjtrts");
+const SUPABASE_URL = Deno.env.get("https://gfvbhttbscvfeqqhjbbyg .supabase.co");
+const SUPABASE_SERVICE_KEY = Deno.env.get("bvfgjhgvnhjmnbvcbnhgfvgfrhgfdtygfdcvbnmkiuhygfnbvdsxqwtyuiopkwscv,mnefghk.,mnbvdwsx");
 serve(async (req) => {
   try {
     // 1. Get data from request body
@@ -95,3 +94,4 @@ serve(async (req) => {
     });
   }
 });
+
