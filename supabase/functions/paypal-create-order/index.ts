@@ -2,11 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // NOTE: These environment variables would be set in the Supabase dashboard
-const PAYPAL_CLIENT_ID = Deno.env.get("AVVdd3tZvuJhi1UZpIMGvHBKg-zHb8R3HN7Yl2VKj8GDoO3_XwH1ZHQkUuxu8S_kvsmhTOJ36U4BNxZF");
-const PAYPAL_CLIENT_SECRET = Deno.env.get("ELvPlyjGtJ3CwnodQXkmHMm2NKztfE3fm_hKNEjTx83Dr_UA-igSSsqcPLBpOVqSc6znP5rdv3brdOCe");
-const SUPABASE_URL = Deno.env.get("https://tladrluezsmmhjbhupgb.supabase.co");
-const SUPABASE_SERVICE_KEY = Deno.env.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsYWRybHVlenNtbWhqYmh1cGdiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTQyNjk2NCwiZXhwIjoyMDcxMDAyOTY0fQ.GtJCXxiVl1H2vMmnKa7TF6NY8lysOk2JE6veKZMDD2o");
-
+const PAYPAL_CLIENT_ID = Deno.env.get("hgfdcergsgvfddtthfdbdrfhddgewdfsedf");
+const PAYPAL_CLIENT_SECRET = Deno.env.get("asdfggfdsyjnbvfrghkijhnbvcdghujnbdwszxvfrtyuiolkhgewqazmrfv");
+const SUPABASE_URL = Deno.env.get("https://gfvbhttbscvfeqqhjbbyg .supabase.co");
+const SUPABASE_SERVICE_KEY = Deno.env.get("bvfgjhgvnhjmnbvcbnhgfvgfrhgfdtygfdcvbnmkiuhygfnbvdsxqwtyuiopkwscv,mnefghk.,mnbvdwsx");
 
 const PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com"; // Sandbox URL
 
@@ -82,3 +81,4 @@ serve(async (req) => {
     });
   }
 });
+
