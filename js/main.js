@@ -249,12 +249,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalButtonText = submitButton.textContent;
 
             const showOverlay = (message) => {
-                overlayMessage.textContent = message;
-                overlay.classList.add('visible');
+                if(overlay && overlayMessage) {
+                    overlayMessage.textContent = message;
+                    overlay.classList.add('visible');
+                }
             };
 
             const hideOverlay = () => {
-                overlay.classList.remove('visible');
+                if(overlay) {
+                    overlay.classList.remove('visible');
+                }
             };
 
             try {
@@ -351,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 let historyHTML = '<ul>';
                 for (const payout of payouts) {
-                    historyHTML += `<li>${new Date(payout.created_at).toLocaleDateString()}: <strong>\$${payout.amount.toFixed(2)}</strong> - Estado: ${payout.status}</li>`;
+                    historyHTML += `<li>${new Date(payout.created_at).toLocaleDateString()}: <strong>$${payout.amount.toFixed(2)}</strong> - Estado: ${payout.status}</li>`;
                 }
                 historyHTML += '</ul>';
                 payoutHistoryList.innerHTML = historyHTML;
@@ -374,9 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const netPayout = totalRevenue - commissionAmount;
 
             earningsDiv.innerHTML = `
-                <div class="earning-item">Ingresos Totales: <strong>\$${totalRevenue.toFixed(2)}</strong></div>
-                <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-\$${commissionAmount.toFixed(2)}</strong></div>
-                <div class="earning-item">Pago Neto Estimado: <strong>\$${netPayout.toFixed(2)}</strong></div>
+                <div class="earning-item">Ingresos Totales: <strong>$${totalRevenue.toFixed(2)}</strong></div>
+                <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-$${commissionAmount.toFixed(2)}</strong></div>
+                <div class="earning-item">Pago Neto Estimado: <strong>$${netPayout.toFixed(2)}</strong></div>
                 <div class="earning-item">Próximo Día de Pago: <strong>Fin de mes</strong></div>
             `;
 
@@ -407,7 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadUserProducts();
-        loadAdminStats();
     }
 
     // Lógica para la página de Admin
@@ -424,8 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Ingresos (simulado)
             const totalRevenue = 12540.50;
             const monthlySales = 1850.75;
-            document.getElementById('stats-total-revenue').textContent = `\$${totalRevenue.toFixed(2)}`;
-            document.getElementById('stats-monthly-sales').textContent = `\$${monthlySales.toFixed(2)}`;
+            document.getElementById('stats-total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
+            document.getElementById('stats-monthly-sales').textContent = `$${monthlySales.toFixed(2)}`;
         }
 
         async function loadPendingProducts() {
@@ -456,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="pending-product-item" id="product-${product.id}">
                         <div class="pending-product-info">
                             <h3>${product.name}</h3>
-                            <p>Vendedor: ${product.profiles.username || 'N/A'} | Precio: \$${product.price.toFixed(2)}</p>
+                            <p>Vendedor: ${product.profiles.username || 'N/A'} | Precio: $${product.price.toFixed(2)}</p>
                         </div>
                         <div class="pending-product-actions">
                             <button class="btn btn-primary approve-btn" data-id="${product.id}">Aprobar</button>
@@ -599,13 +602,13 @@ document.addEventListener('DOMContentLoaded', () => {
         async function loadApprovedProducts() {
              const { data: products, error } = await supabaseClient
                 .from('products')
-                .select(\`
+                .select(`
                     id,
                     name,
                     price,
                     is_suspended,
                     profiles ( id, username )
-                \`)
+                `)
                 .eq('status', 'approved');
 
             if (error) {
