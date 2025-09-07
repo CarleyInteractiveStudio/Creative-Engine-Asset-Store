@@ -102,6 +102,10 @@ a {
     overflow: hidden;
 }
 
+.config-dropdown.active {
+    display: block;
+}
+
 .config-dropdown a {
     display: block;
     padding: 12px 20px;

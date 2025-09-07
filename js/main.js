@@ -9,7 +9,7 @@ if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
 const { createClient } = supabase;
 const supabaseUrl = 'https://tladrluezsmmhjbhupgb.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsYWRybHVlenNtbWhqYmh1cGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjY5NjQsImV4cCI6MjA3MTAwMjk2NH0.p7x3MPizmNdX57KzX5T4c15ytuH1oznjFqyp14HD-QU';
-window.supabaseClient = createClient(supabaseUrl, supabaseKey);
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Creative Engine Asset Store script cargado.");
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = e.target.email.value;
             const password = e.target.password.value;
 
-            const { data: signInData, error } = await window.supabaseClient.auth.signInWithPassword({
+            const { data: signInData, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) {
                 alert(`Error al iniciar sesión: ${error.message}`);
             } else {
-                const { data: profile, error: profileError } = await window.supabaseClient
+                const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('points, is_admin')
                     .eq('id', signInData.user.id)
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const { data, error } = await window.supabaseClient.auth.signUp({
+            const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
             });
@@ -92,33 +92,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const configBtn = document.getElementById('config-btn');
     const configDropdown = document.getElementById('config-dropdown');
 
-    // --- START OF DEBUGGING CODE ---
-    if (configBtn) {
-        // Use a timeout to ensure the page has finished rendering
-        setTimeout(() => {
-            const rect = configBtn.getBoundingClientRect();
-            const elemAtCenter = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-
-            configBtn.style.border = '3px solid red';
-            configBtn.style.boxSizing = 'border-box';
-
-            if (elemAtCenter && elemAtCenter !== configBtn) {
-                elemAtCenter.style.border = '3px solid blue';
-                elemAtCenter.style.boxSizing = 'border-box';
-                console.log('DEBUG: An element is covering the settings button:', elemAtCenter);
-            }
-        }, 500); // 500ms delay
-    }
-    // --- END OF DEBUGGING CODE ---
-
     if (configBtn && configDropdown) {
-        configBtn.addEventListener('click', () => {
-            configDropdown.style.display = configDropdown.style.display === 'block' ? 'none' : 'block';
+        configBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            configDropdown.classList.toggle('active');
         });
 
         window.addEventListener('click', (e) => {
             if (configBtn && !configBtn.contains(e.target) && !configDropdown.contains(e.target)) {
-                configDropdown.style.display = 'none';
+                configDropdown.classList.remove('active');
             }
         });
     }
@@ -159,19 +141,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoutButton) {
             logoutButton.addEventListener('click', async (e) => {
                 e.preventDefault();
-                await window.supabaseClient.auth.signOut();
+                await supabaseClient.auth.signOut();
             });
         }
     }
 
-    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_OUT') {
             sessionStorage.removeItem('user_points');
             sessionStorage.removeItem('is_admin');
             updateUserUI(null);
         } else if (session?.user) {
             if (sessionStorage.getItem('is_admin') === null) {
-                const { data: profile, error } = await window.supabaseClient
+                const { data: profile, error } = await supabaseClient
                     .from('profiles')
                     .select('points, is_admin')
                     .eq('id', session.user.id)
@@ -192,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (uploadForm) {
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
                 alert('Debes iniciar sesión para subir un producto.');
                 window.location.href = 'login.html';
@@ -216,17 +198,17 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const timestamp = Date.now();
                 const mainFilePath = `${user.id}/${timestamp}-${mainFile.name}`;
-                const { error: mainFileError } = await window.supabaseClient.storage.from('product_files').upload(mainFilePath, mainFile);
+                const { error: mainFileError } = await supabaseClient.storage.from('product_files').upload(mainFilePath, mainFile);
                 if (mainFileError) throw mainFileError;
-                const { data: { publicUrl: mainFileUrl } } = window.supabaseClient.storage.from('product_files').getPublicUrl(mainFilePath);
-                const { data: productData, error: productError } = await window.supabaseClient.from('products').insert({ name: productName, description: description, price: price, category_id: categoryId, youtube_url: youtubeUrl, seller_id: user.id, main_file_url: mainFileUrl, status: 'pending' }).select().single();
+                const { data: { publicUrl: mainFileUrl } } = supabaseClient.storage.from('product_files').getPublicUrl(mainFilePath);
+                const { data: productData, error: productError } = await supabaseClient.from('products').insert({ name: productName, description: description, price: price, category_id: categoryId, youtube_url: youtubeUrl, seller_id: user.id, main_file_url: mainFileUrl, status: 'pending' }).select().single();
                 if (productError) throw productError;
                 for (const image of images) {
                     const imagePath = `${user.id}/${productData.id}/${image.name}`;
-                    const { error: imageError } = await window.supabaseClient.storage.from('product_images').upload(imagePath, image);
+                    const { error: imageError } = await supabaseClient.storage.from('product_images').upload(imagePath, image);
                     if (imageError) throw imageError;
-                    const { data: { publicUrl: imageUrl } } = window.supabaseClient.storage.from('product_images').getPublicUrl(imagePath);
-                    const { error: productImageError } = await window.supabaseClient.from('product_images').insert({ product_id: productData.id, image_url: imageUrl });
+                    const { data: { publicUrl: imageUrl } } = supabaseClient.storage.from('product_images').getPublicUrl(imagePath);
+                    const { error: productImageError } = await supabaseClient.from('product_images').insert({ product_id: productData.id, image_url: imageUrl });
                     if (productImageError) throw productImageError;
                 }
                 alert('¡Producto subido exitosamente! Será revisado por un administrador.');
@@ -242,13 +224,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const productListDiv = document.getElementById('product-list');
     if (productListDiv) {
         async function loadUserProducts() {
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
                 window.location.href = 'login.html';
                 return;
             }
             const payoutHistoryList = document.getElementById('payout-history-list');
-            const { data: payouts, error: payoutError } = await window.supabaseClient.from('payouts').select('*').eq('seller_id', user.id).order('created_at', { ascending: false });
+            const { data: payouts, error: payoutError } = await supabaseClient.from('payouts').select('*').eq('seller_id', user.id).order('created_at', { ascending: false });
             if (payoutError) {
                 payoutHistoryList.innerHTML = '<p class="error">No se pudo cargar el historial de pagos.</p>';
             } else if (payouts.length === 0) {
@@ -274,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="earning-item">Pago Neto Estimado: <strong>$${netPayout.toFixed(2)}</strong></div>
                 <div class="earning-item">Próximo Día de Pago: <strong>Fin de mes</strong></div>
             `;
-            const { data: products, error } = await window.supabaseClient.from('products').select('*').eq('seller_id', user.id).order('created_at', { ascending: false });
+            const { data: products, error } = await supabaseClient.from('products').select('*').eq('seller_id', user.id).order('created_at', { ascending: false });
             if (error) {
                 console.error('Error al cargar los productos:', error);
                 productListDiv.innerHTML = '<p class="error">No se pudieron cargar tus productos.</p>';
@@ -298,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingProductsList = document.getElementById('pending-products-list');
     if (pendingProductsList) {
         async function loadAdminStats() {
-            const { count, error: countError } = await window.supabaseClient.from('products').select('*', { count: 'exact', head: true }).eq('status', 'approved');
+            const { count, error: countError } = await supabaseClient.from('products').select('*', { count: 'exact', head: true }).eq('status', 'approved');
             document.getElementById('stats-total-products').textContent = countError ? 'N/A' : count;
             const totalRevenue = 12540.50;
             const monthlySales = 1850.75;
@@ -306,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('stats-monthly-sales').textContent = `$${monthlySales.toFixed(2)}`;
         }
         async function loadPendingProducts() {
-            const { data: products, error } = await window.supabaseClient.from('products').select(`id, name, price, profiles ( id, username )`).eq('status', 'pending');
+            const { data: products, error } = await supabaseClient.from('products').select(`id, name, price, profiles ( id, username )`).eq('status', 'pending');
             if (error) {
                 console.error('Error cargando productos pendientes:', error);
                 pendingProductsList.innerHTML = '<p class="error">No se pudieron cargar los productos.</p>';
@@ -340,24 +322,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentRejectingProductId = null;
         closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
         async function handleApproval(productId) {
-            const { error } = await window.supabaseClient.from('products').update({ status: 'approved' }).eq('id', productId);
+            const { error } = await supabaseClient.from('products').update({ status: 'approved' }).eq('id', productId);
             if (error) {
                 alert('Error al aprobar el producto.');
                 console.error(error);
             } else {
                 document.getElementById(`product-${productId}`).remove();
-                window.supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'approved' } });
+                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'approved' } });
             }
         }
         async function handleRejection(productId, reason) {
-             const { error } = await window.supabaseClient.from('products').update({ status: 'rejected', rejection_reason: reason }).eq('id', productId);
+             const { error } = await supabaseClient.from('products').update({ status: 'rejected', rejection_reason: reason }).eq('id', productId);
              if (error) {
                 alert('Error al rechazar el producto.');
                 console.error(error);
             } else {
                 modal.style.display = 'none';
                 document.getElementById(`product-${productId}`).remove();
-                window.supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'rejected', reason: reason } });
+                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'rejected', reason: reason } });
             }
         }
         pendingProductsList.addEventListener('click', (e) => {
@@ -384,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const featuredAssetGrid = document.querySelector('#featured .asset-grid');
     if (featuredAssetGrid) {
         async function loadFeaturedProducts() {
-            const { data: products, error } = await window.supabaseClient.from('products').select('*').eq('status', 'approved').limit(4);
+            const { data: products, error } = await supabaseClient.from('products').select('*').eq('status', 'approved').limit(4);
             if (error) {
                 console.error('Error cargando productos destacados:', error);
                 return;
@@ -409,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryAssetGrid = document.querySelector('.category-content .asset-grid');
     if (categoryAssetGrid) {
         async function loadCategoryProducts() {
-            const { data: products, error } = await window.supabaseClient.from('products').select('*').eq('status', 'approved');
+            const { data: products, error } = await supabaseClient.from('products').select('*').eq('status', 'approved');
             if (error) {
                 console.error('Error cargando productos de categoría:', error);
                 return;
@@ -434,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const approvedProductsList = document.getElementById('approved-products-list');
     if (approvedProductsList) {
         async function loadApprovedProducts() {
-             const { data: products, error } = await window.supabaseClient.from('products').select(`id, name, price, is_suspended, profiles ( id, username )`).eq('status', 'approved');
+             const { data: products, error } = await supabaseClient.from('products').select(`id, name, price, is_suspended, profiles ( id, username )`).eq('status', 'approved');
             if (error) {
                 console.error('Error cargando productos aprobados:', error);
                 return;
@@ -464,23 +446,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = target.dataset.id;
             if (target.classList.contains('suspend-btn')) {
                 const isSuspended = target.dataset.suspended === 'true';
-                const { error } = await window.supabaseClient.from('products').update({ is_suspended: !isSuspended }).eq('id', id);
+                const { error } = await supabaseClient.from('products').update({ is_suspended: !isSuspended }).eq('id', id);
                 if (error) {
                     alert('Error al actualizar el estado del producto.');
                 } else {
                     target.dataset.suspended = !isSuspended;
                     target.textContent = !isSuspended ? 'Rehabilitar' : 'Suspender';
                     document.querySelector(`#product-approved-${id} h3`).classList.toggle('suspended-text');
-                    window.supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
+                    supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
                 }
             } else if (target.classList.contains('delete-btn')) {
                 if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
-                    const { error } = await window.supabaseClient.from('products').delete().eq('id', id);
+                    const { error } = await supabaseClient.from('products').delete().eq('id', id);
                     if (error) {
                         alert('Error al borrar el producto.');
                     } else {
                         document.getElementById(`product-approved-${id}`).remove();
-                        window.supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
+                        supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
                     }
                 }
             }
@@ -494,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             paypal.Buttons({
                 async createOrder() {
                     try {
-                        const { data, error } = await window.supabaseClient.functions.invoke('paypal-create-order', { body: { productId } });
+                        const { data, error } = await supabaseClient.functions.invoke('paypal-create-order', { body: { productId } });
                         if (error) throw new Error(error.message);
                         return data.orderID;
                     } catch (err) {
@@ -504,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 async onApprove(data) {
                     try {
-                        const { data: responseData, error } = await window.supabaseClient.functions.invoke('paypal-capture-order', { body: { orderID: data.orderID, productId } });
+                        const { data: responseData, error } = await supabaseClient.functions.invoke('paypal-capture-order', { body: { orderID: data.orderID, productId } });
                         if (error) throw new Error(error.message);
                         alert('¡Compra exitosa! El asset ha sido añadido a tu colección.');
                         window.location.href = 'my-assets.html';
@@ -530,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'admin.html';
         }
         async function loadProductForEdit() {
-            const { data: product, error } = await window.supabaseClient.from('products').select('*').eq('id', productId).single();
+            const { data: product, error } = await supabaseClient.from('products').select('*').eq('id', productId).single();
             if (error || !product) {
                 alert('No se pudo cargar el producto para editar.');
                 window.location.href = 'admin.html';
@@ -549,13 +531,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: document.getElementById('price').value,
                 category_id: document.getElementById('category').value,
             };
-            const { error } = await window.supabaseClient.from('products').update(updatedData).eq('id', productId);
+            const { error } = await supabaseClient.from('products').update(updatedData).eq('id', productId);
             if (error) {
                 alert('Error al guardar los cambios.');
                 console.error(error);
             } else {
                 alert('Producto actualizado exitosamente.');
-                window.supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'edited' } });
+                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'edited' } });
                 window.location.href = 'admin.html';
             }
         });
@@ -565,12 +547,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (payoutForm) {
         const emailInput = document.getElementById('paypal-email');
         async function loadPayoutSettings() {
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
                 window.location.href = 'login.html';
                 return;
             }
-            const { data, error } = await window.supabaseClient.from('profiles').select('paypal_email').eq('id', user.id).single();
+            const { data, error } = await supabaseClient.from('profiles').select('paypal_email').eq('id', user.id).single();
             if (error) {
                 console.error('Error al cargar la configuración de pago:', error);
             } else if (data && data.paypal_email) {
@@ -579,10 +561,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         payoutForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) return;
             const newEmail = emailInput.value;
-            const { error } = await window.supabaseClient.from('profiles').update({ paypal_email: newEmail }).eq('id', user.id);
+            const { error } = await supabaseClient.from('profiles').update({ paypal_email: newEmail }).eq('id', user.id);
             if (error) {
                 alert('Error al guardar la configuración.');
                 console.error(error);
@@ -595,12 +577,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const wishlistDiv = document.getElementById('wishlist-assets-list');
     if(wishlistDiv) {
         async function loadWishlist() {
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
                 window.location.href = 'login.html';
                 return;
             }
-            const { data, error } = await window.supabaseClient.from('wishlist_items').select(`products (id, name, price)`).eq('user_id', user.id);
+            const { data, error } = await supabaseClient.from('wishlist_items').select(`products (id, name, price)`).eq('user_id', user.id);
             if (error) {
                 console.error('Error al cargar la lista de deseos:', error);
                 wishlistDiv.innerHTML = '<p class="error">No se pudo cargar tu lista de deseos.</p>';
@@ -632,12 +614,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const purchasedDiv = document.getElementById('purchased-assets-list');
     if(purchasedDiv) {
         async function loadPurchasedAssets() {
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
                 window.location.href = 'login.html';
                 return;
             }
-            const { data, error } = await window.supabaseClient.from('user_owned_assets').select('products(*)').eq('user_id', user.id);
+            const { data, error } = await supabaseClient.from('user_owned_assets').select('products(*)').eq('user_id', user.id);
             if (error) {
                 console.error('Error al cargar los assets comprados:', error);
                 purchasedDiv.innerHTML = '<p class="error">No se pudieron cargar tus assets.</p>';
@@ -682,14 +664,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleGetFreeClick(e) {
         const button = e.target.closest('.btn-get-free');
         if (!button) return;
-        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
             alert('Debes iniciar sesión para obtener un asset.');
             window.location.href = 'login.html';
             return;
         }
         const productId = button.dataset.productId;
-        const { error } = await window.supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: 0 });
+        const { error } = await supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: 0 });
         if (error) {
             console.error('Error al obtener el asset gratuito:', error);
             alert('Hubo un error al obtener el asset.');
@@ -703,28 +685,28 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleBuyWithPoints(e) {
         const button = e.target.closest('.btn-buy-points');
         if (!button) return;
-        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
             alert('Debes iniciar sesión para usar tus puntos.');
             return;
         }
         const price = parseFloat(button.dataset.price);
         const pointCost = price * 100;
-        const { data: profile } = await window.supabaseClient.from('profiles').select('points').eq('id', user.id).single();
+        const { data: profile } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
         if (profile.points < pointCost) {
             alert('No tienes suficientes puntos para comprar este asset.');
             return;
         }
         if (confirm(`¿Estás seguro de que quieres gastar ${pointCost} puntos en este asset?`)) {
             const newPoints = profile.points - pointCost;
-            const { error: updateError } = await window.supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
+            const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
             if (updateError) {
                 alert('Error al actualizar tus puntos.');
                 return;
             }
             const productId = button.dataset.productId;
-            await window.supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: `Comprado producto #${productId}` });
-            await window.supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: price });
+            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: `Comprado producto #${productId}` });
+            await supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: price });
             alert('¡Compra con puntos exitosa! El asset ha sido añadido a tu colección.');
             button.textContent = 'En tu colección';
             button.disabled = true;
@@ -735,22 +717,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const earnPointsBtn = document.getElementById('earn-points-btn');
     if(earnPointsBtn) {
         earnPointsBtn.addEventListener('click', async () => {
-            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) {
                 alert('Debes iniciar sesión para ganar puntos.');
                 return;
             }
-            const { data: profile, error: fetchError } = await window.supabaseClient.from('profiles').select('points').eq('id', user.id).single();
+            const { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
             if(fetchError) {
                 alert('Error al obtener tu perfil.');
                 return;
             }
             const newPoints = profile.points + 5;
-            const { error: updateError } = await window.supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
+            const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
             if(updateError) {
                 alert('Error al añadir puntos.');
             } else {
-                await window.supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: 5, description: 'Vio un anuncio de prueba' });
+                await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: 5, description: 'Vio un anuncio de prueba' });
                 alert('¡Has ganado 5 puntos!');
                 updateUserUI(user);
             }
@@ -759,27 +741,27 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleWishlistClick(e) {
         const button = e.target.closest('.wishlist-btn, .wishlist-btn-large');
         if (!button) return;
-        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
             alert('Debes iniciar sesión para añadir a tu lista de deseos.');
             window.location.href = 'login.html';
             return;
         }
         const productId = button.dataset.productId;
-        const { data: existing, error: checkError } = await window.supabaseClient.from('wishlist_items').select('*').eq('user_id', user.id).eq('product_id', productId).maybeSingle();
+        const { data: existing, error: checkError } = await supabaseClient.from('wishlist_items').select('*').eq('user_id', user.id).eq('product_id', productId).maybeSingle();
         if (checkError) {
             console.error('Error al comprobar la lista de deseos:', checkError);
             return;
         }
         if (existing) {
-            const { error: deleteError } = await window.supabaseClient.from('wishlist_items').delete().match({ id: existing.id });
+            const { error: deleteError } = await supabaseClient.from('wishlist_items').delete().match({ id: existing.id });
             if (deleteError) {
                 console.error('Error al eliminar de la lista de deseos:', deleteError);
             } else {
                 button.classList.remove('active');
             }
         } else {
-            const { error: insertError } = await window.supabaseClient.from('wishlist_items').insert({ user_id: user.id, product_id: productId });
+            const { error: insertError } = await supabaseClient.from('wishlist_items').insert({ user_id: user.id, product_id: productId });
             if (insertError) {
                 console.error('Error al añadir a la lista de deseos:', insertError);
             } else {
