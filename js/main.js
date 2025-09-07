@@ -198,9 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // --- Lógica de Subida ---
             try {
-                // 1. Subir archivo principal
                 const timestamp = Date.now();
                 const mainFilePath = `${user.id}/${timestamp}-${mainFile.name}`;
                 const { error: mainFileError } = await supabaseClient.storage
@@ -210,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const { data: { publicUrl: mainFileUrl } } = supabaseClient.storage.from('product_files').getPublicUrl(mainFilePath);
 
-                // 2. Insertar en la tabla 'products'
                 const { data: productData, error: productError } = await supabaseClient
                     .from('products')
                     .insert({
@@ -227,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     .single();
                 if (productError) throw productError;
 
-                // 3. Subir imágenes y guardar en 'product_images'
                 for (const image of images) {
                     const imagePath = `${user.id}/${productData.id}/${image.name}`;
                     const { error: imageError } = await supabaseClient.storage
@@ -263,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // --- Cargar Historial de Pagos ---
             const payoutHistoryList = document.getElementById('payout-history-list');
             const { data: payouts, error: payoutError } = await supabaseClient
                 .from('payouts')
@@ -284,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 payoutHistoryList.innerHTML = historyHTML;
             }
 
-            // --- Cargar Resumen de Ganancias (Simulado) ---
             const earningsDiv = document.getElementById('earnings-data');
             const simulatedSales = [
                 { price: 10.00 }, { price: 25.00 }, { price: 5.00 }, { price: 12.00 }
