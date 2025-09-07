@@ -21,35 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("Creative Engine Asset Store script cargado.");
 
     // Lógica para la página de inicio de sesión
-    const standardLoginForm = document.getElementById('standard-login-form');
-    const devLoginForm = document.getElementById('developer-login-form');
-    const emailInput = document.getElementById('email');
-    const backToStandardBtn = document.getElementById('back-to-standard-login');
-
-    // Solo ejecutar si estamos en la página de login
-    if (standardLoginForm && devLoginForm && emailInput && backToStandardBtn) {
-
-        function showDevForm() {
-            standardLoginForm.style.display = 'none';
-            devLoginForm.style.display = 'block';
-        }
-
-        function showStandardForm() {
-            devLoginForm.style.display = 'none';
-            standardLoginForm.style.display = 'block';
-        }
-
-        // 1. Comprobar si la URL contiene ?dev=true para mostrar el formulario de desarrollador
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('dev') === 'true') {
-            showDevForm();
-        }
-
-        // 2. Botón para volver al formulario estándar
-        backToStandardBtn.addEventListener('click', showStandardForm);
-
-        // Lógica para el envío del formulario de inicio de sesión estándar
-        const loginForm = standardLoginForm.querySelector('form');
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = e.target.email.value;
@@ -63,47 +36,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) {
                 alert(`Error al iniciar sesión: ${error.message}`);
             } else {
-                // Fetch profile data and store it in session storage
                 const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
-                    .select('points')
+                    .select('points, is_admin')
                     .eq('id', signInData.user.id)
                     .single();
 
-                if (!profileError && profile) {
+                if (profileError) {
+                    console.error("Error al obtener el perfil:", profileError);
+                } else if (profile) {
                     sessionStorage.setItem('user_points', profile.points);
+                    sessionStorage.setItem('is_admin', profile.is_admin);
                 }
 
                 alert('¡Inicio de sesión exitoso!');
-                window.location.href = 'index.html'; // Redirigir a la página de inicio
-            }
-        });
-
-        // Lógica para el envío del formulario de desarrollador
-        const devForm = devLoginForm.querySelector('form');
-        devForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const devCode = e.target['dev-code'].value;
-
-            // La verificación ahora se hace a través de una Edge Function para mayor seguridad
-            try {
-                const { data, error } = await supabaseClient.functions.invoke('verify-dev-code', {
-                    body: { code: devCode },
-                });
-
-                if (error) throw error;
-
-                if (data.isValid) {
-                    alert('Verificación de desarrollador exitosa. Por favor, inicie sesión con su cuenta principal.');
-                    sessionStorage.setItem('is_developer_gate_passed', 'true');
-                    showStandardForm(); // Volver al formulario de login estándar
-                } else {
-                    alert('Código de desarrollador incorrecto.');
-                }
-
-            } catch (error) {
-                 console.error('Error al verificar el código de desarrollador:', error);
-                 alert(`Error al contactar el servicio de verificación: ${error.message}`);
+                window.location.href = 'index.html';
             }
         });
     }
@@ -141,13 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const configDropdown = document.getElementById('config-dropdown');
 
     if (configBtn && configDropdown) {
-        configBtn.addEventListener('click', () => {
-            configDropdown.style.display = configDropdown.style.display === 'block' ? 'none' : 'block';
+        configBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            configDropdown.classList.toggle('active');
         });
 
         window.addEventListener('click', (e) => {
-            if (!configBtn.contains(e.target) && !configDropdown.contains(e.target)) {
-                configDropdown.style.display = 'none';
+            if (configBtn && !configBtn.contains(e.target) && !configDropdown.contains(e.target)) {
+                configDropdown.classList.remove('active');
             }
         });
     }
@@ -157,11 +105,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let dropdownHTML = '';
         if (user) {
-            // Usuario está logueado
             const userPoints = sessionStorage.getItem('user_points') || 0;
+            const isAdmin = sessionStorage.getItem('is_admin') === 'true';
 
             let adminLink = '';
-            if (sessionStorage.getItem('is_developer_gate_passed') === 'true') {
+            if (isAdmin) {
                 adminLink = '<a href="admin.html">Panel de Admin</a>';
             }
 
@@ -180,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <a href="login.html">Iniciar Sesión</a>
                 <a href="register.html">Registrarse</a>
             `;
-            sessionStorage.removeItem('is_developer_gate_passed');
+            sessionStorage.removeItem('user_points');
+            sessionStorage.removeItem('is_admin');
         }
         configDropdown.innerHTML = dropdownHTML;
 
@@ -195,9 +144,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    supabaseClient.auth.onAuthStateChange((event, session) => {
-        const user = session?.user;
-        updateUserUI(user);
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+            sessionStorage.removeItem('user_points');
+            sessionStorage.removeItem('is_admin');
+            updateUserUI(null);
+        } else if (session?.user) {
+            if (sessionStorage.getItem('is_admin') === null) {
+                const { data: profile, error } = await supabaseClient
+                    .from('profiles')
+                    .select('points, is_admin')
+                    .eq('id', session.user.id)
+                    .single();
+                if (!error && profile) {
+                    sessionStorage.setItem('user_points', profile.points);
+                    sessionStorage.setItem('is_admin', profile.is_admin);
+                }
+            }
+            updateUserUI(session.user);
+        } else {
+            updateUserUI(null);
+        }
     });
 
     // Lógica para la página de subida de productos
