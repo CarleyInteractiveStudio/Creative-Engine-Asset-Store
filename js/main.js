@@ -92,6 +92,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const configBtn = document.getElementById('config-btn');
     const configDropdown = document.getElementById('config-dropdown');
 
+    // --- START OF DEBUGGING CODE ---
+    if (configBtn) {
+        // Use a timeout to ensure the page has finished rendering
+        setTimeout(() => {
+            const rect = configBtn.getBoundingClientRect();
+            const elemAtCenter = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+            configBtn.style.border = '3px solid red';
+            configBtn.style.boxSizing = 'border-box';
+
+            if (elemAtCenter && elemAtCenter !== configBtn) {
+                elemAtCenter.style.border = '3px solid blue';
+                elemAtCenter.style.boxSizing = 'border-box';
+                console.log('DEBUG: An element is covering the settings button:', elemAtCenter);
+            }
+        }, 500); // 500ms delay
+    }
+    // --- END OF DEBUGGING CODE ---
+
     if (configBtn && configDropdown) {
         configBtn.addEventListener('click', () => {
             configDropdown.style.display = configDropdown.style.display === 'block' ? 'none' : 'block';
