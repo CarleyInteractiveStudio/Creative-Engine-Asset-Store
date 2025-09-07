@@ -17,10 +17,12 @@ serve(async (req) => {
   }
 
   try {
-    const { code } = await req.json();
+    // Workaround for potential missing Content-Type header
+    const bodyText = await req.text();
+    const { code } = JSON.parse(bodyText || "{}");
 
     if (!code) {
-      throw new Error("Developer code is required.");
+      throw new Error("Developer code is required in the request body.");
     }
 
     // Create a Supabase client with the service role key to bypass RLS
@@ -36,7 +38,7 @@ serve(async (req) => {
     if (error) {
       // If .single() returns an error, it means the code was not found (or another DB error occurred)
       console.error("Developer code verification error:", error.message);
-      return new Response(JSON.stringify({ isValid: false }), {
+      return new Response(JSON.stringify({ isValid: false, message: "Code not found or database error." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200, // Return 200 OK but with isValid: false
       });
@@ -48,7 +50,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: `Failed to process request: ${error.message}` }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
