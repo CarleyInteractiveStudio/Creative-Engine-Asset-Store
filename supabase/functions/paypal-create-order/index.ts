@@ -9,6 +9,11 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_KEY");
 
 const PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com"; // Sandbox URL
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 // Function to get PayPal access token
 async function getPayPalAccessToken() {
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`);
@@ -25,6 +30,10 @@ async function getPayPalAccessToken() {
 }
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     const { productId } = await req.json();
 
@@ -68,7 +77,7 @@ serve(async (req) => {
 
     if (orderData.id) {
       return new Response(JSON.stringify({ orderID: orderData.id }), {
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
       throw new Error(orderData.message || "Failed to create PayPal order.");
@@ -76,9 +85,8 @@ serve(async (req) => {
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
   }
 });
-

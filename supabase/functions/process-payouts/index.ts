@@ -8,6 +8,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_KEY");
 const PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 async function getPayPalAccessToken() {
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`);
   const response = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
@@ -19,7 +24,11 @@ async function getPayPalAccessToken() {
   return data.access_token;
 }
 
-serve(async (_req) => {
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -40,7 +49,7 @@ serve(async (_req) => {
 
     if (salesError) throw new Error(`Error fetching sales: ${salesError.message}`);
     if (!sales || sales.length === 0) {
-      return new Response(JSON.stringify({ message: "No sales to process for the previous month." }));
+      return new Response(JSON.stringify({ message: "No sales to process for the previous month." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 3. Aggregate sales by seller
@@ -80,7 +89,7 @@ serve(async (_req) => {
     }
 
     if (payoutItems.length === 0) {
-      return new Response(JSON.stringify({ message: "No payouts to process after calculations." }));
+      return new Response(JSON.stringify({ message: "No payouts to process after calculations." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // 5. Execute PayPal Batch Payout
@@ -122,13 +131,12 @@ serve(async (_req) => {
         // Handle this critical error, e.g., send an alert to the admin
     }
 
-    return new Response(JSON.stringify({ message: "Payouts processed successfully.", batchId: payoutBatchId }));
+    return new Response(JSON.stringify({ message: "Payouts processed successfully.", batchId: payoutBatchId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
   }
 });
-
