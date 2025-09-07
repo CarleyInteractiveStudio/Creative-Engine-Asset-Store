@@ -202,6 +202,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lógica para la página de subida de productos
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
+
+        const imagesInput = document.getElementById('product-images');
+        imagesInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 3) {
+                alert('Puedes seleccionar un máximo de 3 imágenes.');
+                e.target.value = ''; // Limpiar la selección
+            }
+        });
+
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -231,11 +240,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // --- Lógica de Subida ---
+            const overlay = document.getElementById('upload-overlay');
+            const overlayMessage = document.getElementById('upload-message');
+            const submitButton = uploadForm.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+
+            const showOverlay = (message) => {
+                overlayMessage.textContent = message;
+                overlay.classList.add('visible');
+            };
+
+            const hideOverlay = () => {
+                overlay.classList.remove('visible');
+            };
+
             try {
-                console.log("DEBUG: User object before insert:", user);
-                console.log("DEBUG: User ID for seller_id:", user.id);
+                // Mostrar feedback visual
+                submitButton.disabled = true;
+                showOverlay('Subiendo producto...');
 
                 // 1. Subir archivo principal
+                overlayMessage.textContent = 'Subiendo archivo principal...';
                 const timestamp = Date.now();
                 const mainFilePath = `${user.id}/${timestamp}-${mainFile.name}`;
                 const { error: mainFileError } = await supabaseClient.storage
@@ -246,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data: { publicUrl: mainFileUrl } } = supabaseClient.storage.from('product_files').getPublicUrl(mainFilePath);
 
                 // 2. Insertar en la tabla 'products'
+                overlayMessage.textContent = 'Guardando detalles del producto...';
                 const { data: productData, error: productError } = await supabaseClient
                     .from('products')
                     .insert({
@@ -263,7 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (productError) throw productError;
 
                 // 3. Subir imágenes y guardar en 'product_images'
-                for (const image of images) {
+                for (let i = 0; i < images.length; i++) {
+                    const image = images[i];
+                    overlayMessage.textContent = `Subiendo imagen ${i + 1} de ${images.length}...`;
                     const imagePath = `${user.id}/${productData.id}/${image.name}`;
                     const { error: imageError } = await supabaseClient.storage
                         .from('product_images')
@@ -278,12 +306,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(productImageError) throw productImageError;
                 }
 
-                alert('¡Producto subido exitosamente! Será revisado por un administrador.');
-                window.location.href = 'dashboard.html';
+                showOverlay('¡Producto subido exitosamente! Redirigiendo...');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
 
             } catch (error) {
                 console.error('Error al subir el producto:', error);
-                alert(`Error al subir el producto: ${error.message}`);
+                showOverlay(`Error: ${error.message}`);
+                setTimeout(hideOverlay, 3000); // Ocultar mensaje de error después de 3 segundos
+            } finally {
+                // Restaurar botón
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
         });
     }
