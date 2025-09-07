@@ -232,6 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- Lógica de Subida ---
             try {
+                console.log("DEBUG: User object before insert:", user);
+                console.log("DEBUG: User ID for seller_id:", user.id);
+
                 // 1. Subir archivo principal
                 const timestamp = Date.now();
                 const mainFilePath = `${user.id}/${timestamp}-${mainFile.name}`;
