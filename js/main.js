@@ -262,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 3. Subir imágenes y guardar en 'product_images'
                 for (const image of images) {
                     const imagePath = `${user.id}/${productData.id}/${image.name}`;
-                    console.log("ID del producto recién creado:", productData.id);
                     const { error: imageError } = await supabaseClient.storage
                         .from('product_images')
                         .upload(imagePath, image);
@@ -270,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const { data: { publicUrl: imageUrl } } = supabaseClient.storage.from('product_images').getPublicUrl(imagePath);
 
-                    console.log("Datos para insertar en product_images:", { product_id: productData.id, image_url: imageUrl });
                     const { error: productImageError } = await supabaseClient
                         .from('product_images')
                         .insert({ product_id: productData.id, image_url: imageUrl });
@@ -312,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 let historyHTML = '<ul>';
                 for (const payout of payouts) {
-                    historyHTML += `<li>${new Date(payout.created_at).toLocaleDateString()}: <strong>$${payout.amount.toFixed(2)}</strong> - Estado: ${payout.status}</li>`;
+                    historyHTML += `<li>${new Date(payout.created_at).toLocaleDateString()}: <strong>\$${payout.amount.toFixed(2)}</strong> - Estado: ${payout.status}</li>`;
                 }
                 historyHTML += '</ul>';
                 payoutHistoryList.innerHTML = historyHTML;
@@ -335,9 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const netPayout = totalRevenue - commissionAmount;
 
             earningsDiv.innerHTML = `
-                <div class="earning-item">Ingresos Totales: <strong>$${totalRevenue.toFixed(2)}</strong></div>
-                <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-$${commissionAmount.toFixed(2)}</strong></div>
-                <div class="earning-item">Pago Neto Estimado: <strong>$${netPayout.toFixed(2)}</strong></div>
+                <div class="earning-item">Ingresos Totales: <strong>\$${totalRevenue.toFixed(2)}</strong></div>
+                <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-\$${commissionAmount.toFixed(2)}</strong></div>
+                <div class="earning-item">Pago Neto Estimado: <strong>\$${netPayout.toFixed(2)}</strong></div>
                 <div class="earning-item">Próximo Día de Pago: <strong>Fin de mes</strong></div>
             `;
 
@@ -385,19 +383,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Ingresos (simulado)
             const totalRevenue = 12540.50;
             const monthlySales = 1850.75;
-            document.getElementById('stats-total-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
-            document.getElementById('stats-monthly-sales').textContent = `$${monthlySales.toFixed(2)}`;
+            document.getElementById('stats-total-revenue').textContent = `\$${totalRevenue.toFixed(2)}`;
+            document.getElementById('stats-monthly-sales').textContent = `\$${monthlySales.toFixed(2)}`;
         }
 
         async function loadPendingProducts() {
             const { data: products, error } = await supabaseClient
                 .from('products')
-                .select(\`
+                .select(`
                     id,
                     name,
                     price,
                     profiles ( id, username )
-                \`)
+                `)
                 .eq('status', 'pending');
 
             if (error) {
@@ -413,18 +411,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productHTML = '';
             for (const product of products) {
-                productHTML += \`
+                productHTML += `
                     <div class="pending-product-item" id="product-${product.id}">
                         <div class="pending-product-info">
                             <h3>${product.name}</h3>
-                            <p>Vendedor: ${product.profiles.username || 'N/A'} | Precio: $${product.price.toFixed(2)}</p>
+                            <p>Vendedor: ${product.profiles.username || 'N/A'} | Precio: \$${product.price.toFixed(2)}</p>
                         </div>
                         <div class="pending-product-actions">
                             <button class="btn btn-primary approve-btn" data-id="${product.id}">Aprobar</button>
                             <button class="btn btn-secondary reject-btn" data-id="${product.id}">Rechazar</button>
                         </div>
                     </div>
-                \`;
+                `;
             }
             pendingProductsList.innerHTML = productHTML;
         }
@@ -444,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Error al aprobar el producto.');
                 console.error(error);
             } else {
-                document.getElementById(\`product-${productId}\`).remove();
+                document.getElementById(`product-${productId}`).remove();
                 // Aquí llamaríamos a la Edge Function de notificación
                 supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'approved' } });
             }
@@ -457,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(error);
             } else {
                 modal.style.display = 'none';
-                document.getElementById(\`product-${productId}\`).remove();
+                document.getElementById(`product-${productId}`).remove();
                 // Aquí llamaríamos a la Edge Function de notificación
                 supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'rejected', reason: reason } });
             }
@@ -505,16 +503,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productHTML = '';
             for (const product of products) {
-                 productHTML += \`
+                 productHTML += `
                     <div class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : \`$${product.price.toFixed(2)}\`}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </div>
-                \`;
+                `;
             }
             featuredAssetGrid.innerHTML = productHTML || '<p>No hay productos destacados en este momento.</p>';
         }
@@ -539,16 +537,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productHTML = '';
             for (const product of products) {
-                 productHTML += \`
+                 productHTML += `
                     <div class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : \`$${product.price.toFixed(2)}\`}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </div>
-                \`;
+                `;
             }
             categoryAssetGrid.innerHTML = productHTML || '<p>No hay productos en esta categoría.</p>';
         }
@@ -560,13 +558,13 @@ document.addEventListener('DOMContentLoaded', () => {
         async function loadApprovedProducts() {
              const { data: products, error } = await supabaseClient
                 .from('products')
-                .select(\`
+                .select(`
                     id,
                     name,
                     price,
                     is_suspended,
                     profiles ( id, username )
-                \`)
+                `)
                 .eq('status', 'approved');
 
             if (error) {
@@ -577,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let productHTML = '';
             for (const product of products) {
                 const suspendButtonText = product.is_suspended ? 'Rehabilitar' : 'Suspender';
-                productHTML += \`
+                productHTML += `
                     <div class="pending-product-item" id="product-approved-${product.id}">
                         <div class="pending-product-info">
                             <h3>${product.name} ${product.is_suspended ? '(Suspendido)' : ''}</h3>
@@ -589,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn btn-danger delete-btn" data-id="${product.id}">Borrar</button>
                         </div>
                     </div>
-                \`;
+                `;
             }
             approvedProductsList.innerHTML = productHTML || '<p>No hay productos aprobados.</p>';
         }
@@ -609,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Actualizar UI
                     target.dataset.suspended = !isSuspended;
                     target.textContent = !isSuspended ? 'Rehabilitar' : 'Suspender';
-                    document.querySelector(\`#product-approved-${id} h3\`).classList.toggle('suspended-text');
+                    document.querySelector(`#product-approved-${id} h3`).classList.toggle('suspended-text');
                     // Notificar
                     supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
                 }
@@ -619,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (error) {
                         alert('Error al borrar el producto.');
                     } else {
-                        document.getElementById(\`product-approved-${id}\`).remove();
+                        document.getElementById(`product-approved-${id}`).remove();
                         // Notificar
                         supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
                     }
@@ -791,13 +789,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data, error } = await supabaseClient
                 .from('wishlist_items')
-                .select(\`
+                .select(`
                     products (
                         id,
                         name,
                         price
                     )
-                \`)
+                `)
                 .eq('user_id', user.id);
 
             if (error) {
@@ -814,16 +812,16 @@ document.addEventListener('DOMContentLoaded', () => {
             let productHTML = '<div class="asset-grid">';
             for (const item of data) {
                 const product = item.products;
-                productHTML += \`
+                productHTML += `
                     <div class="asset-card">
                         <button class="wishlist-btn active" data-product-id="${product.id}">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : \`$${product.price.toFixed(2)}\`}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </div>
-                \`;
+                `;
             }
             productHTML += '</div>';
             wishlistDiv.innerHTML = productHTML;
@@ -861,7 +859,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let productHTML = '<div class="asset-grid">';
             for (const item of data) {
                 const product = item.products;
-                productHTML += \`
+                productHTML += `
                     <div class="asset-card">
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
@@ -869,7 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="asset-price">Obtenido</p>
                         </div>
                     </div>
-                \`;
+                `;
             }
             productHTML += '</div>';
             purchasedDiv.innerHTML = productHTML;
@@ -945,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (confirm(\`¿Estás seguro de que quieres gastar ${pointCost} puntos en este asset?\`)) {
+        if (confirm(`¿Estás seguro de que quieres gastar ${pointCost} puntos en este asset?`)) {
             const newPoints = profile.points - pointCost;
             const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
             if (updateError) {
@@ -954,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const productId = button.dataset.productId;
-            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: \`Comprado producto #${productId}\` });
+            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: `Comprado producto #${productId}` });
             await supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: price });
 
             alert('¡Compra con puntos exitosa! El asset ha sido añadido a tu colección.');
