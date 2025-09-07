@@ -7,8 +7,14 @@ if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
 
 // Initialize the Supabase client
 const { createClient } = supabase;
-const supabaseUrl = 'TU_SUPABASE_URL';
-const supabaseKey = 'TU_SUPABASE_KEY';
+const supabaseUrl = 'TU_SUPABASE_URL'; // ¡No olvides reemplazar esto!
+const supabaseKey = 'TU_SUPABASE_KEY'; // ¡No olvides reemplazar esto!
+
+// Advertencia para el desarrollador si las claves no están configuradas
+if (supabaseUrl === 'TU_SUPABASE_URL' || supabaseKey === 'TU_SUPABASE_KEY') {
+    console.error("ADVERTENCIA: Las claves de Supabase no están configuradas en js/main.js. La aplicación no funcionará correctamente sin ellas. Reemplaza 'TU_SUPABASE_URL' y 'TU_SUPABASE_KEY' con tus claves reales.");
+}
+
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,8 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Solo ejecutar si estamos en la página de login
     if (standardLoginForm && devLoginForm && emailInput && backToStandardBtn) {
 
-        const devSuffix = '#Desarrollador809402';
-
         function showDevForm() {
             standardLoginForm.style.display = 'none';
             devLoginForm.style.display = 'block';
@@ -35,29 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
             standardLoginForm.style.display = 'block';
         }
 
-        // 1. Comprobar el sufijo en el email
-        emailInput.addEventListener('keyup', () => {
-            if (emailInput.value.endsWith(devSuffix)) {
-                showDevForm();
-            }
-        });
+        // 1. Comprobar si la URL contiene ?dev=true para mostrar el formulario de desarrollador
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('dev') === 'true') {
+            showDevForm();
+        }
 
-        // 2. Comprobar el atajo de teclado
-        document.addEventListener('keydown', (e) => {
-            // Shift + D + C
-            if (e.shiftKey && !e.ctrlKey && e.key === 'D' && !e.repeat) { // Se quitó e.ctrlKey
-                // Prevenir que se active repetidamente si se mantiene presionado
-                 e.preventDefault();
-                 document.addEventListener('keydown', (e2) => {
-                     if(e2.key == 'C' && e.shiftKey && !e.ctrlKey){ // Se quitó e.ctrlKey
-                        e.preventDefault();
-                        showDevForm();
-                     }
-                 }, { once: true });
-            }
-        });
-
-        // 3. Botón para volver al formulario estándar
+        // 2. Botón para volver al formulario estándar
         backToStandardBtn.addEventListener('click', showStandardForm);
 
         // Lógica para el envío del formulario de inicio de sesión estándar
@@ -96,25 +84,26 @@ document.addEventListener('DOMContentLoaded', () => {
         devForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const devCode = e.target['dev-code'].value;
-            const devPassword = e.target['dev-password'].value;
 
-            // --- SIMULACIÓN DE VERIFICACIÓN ---
-            // NOTA: En un entorno de producción, esto DEBE hacerse en un Edge Function
-            // para verificar de forma segura la contraseña hasheada sin exponerla.
-            // Por ahora, solo comprobaremos si el código existe.
-            const { data, error } = await supabaseClient
-                .from('dev_codes')
-                .select('code')
-                .eq('code', devCode)
-                .single(); // .single() devolverá un error si no se encuentra exactamente una fila
+            // La verificación ahora se hace a través de una Edge Function para mayor seguridad
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('verify-dev-code', {
+                    body: { code: devCode },
+                });
 
-            if (error || !data) {
-                alert('Código de desarrollador o contraseña incorrectos.');
-            } else {
-                // Verificación exitosa (simulada)
-                alert('Verificación de desarrollador exitosa. Por favor, inicie sesión con su cuenta principal.');
-                sessionStorage.setItem('is_developer_gate_passed', 'true');
-                showStandardForm(); // Volver al formulario de login estándar
+                if (error) throw error;
+
+                if (data.isValid) {
+                    alert('Verificación de desarrollador exitosa. Por favor, inicie sesión con su cuenta principal.');
+                    sessionStorage.setItem('is_developer_gate_passed', 'true');
+                    showStandardForm(); // Volver al formulario de login estándar
+                } else {
+                    alert('Código de desarrollador incorrecto.');
+                }
+
+            } catch (error) {
+                 console.error('Error al verificar el código de desarrollador:', error);
+                 alert(`Error al contactar el servicio de verificación: ${error.message}`);
             }
         });
     }
@@ -274,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const image of images) {
                     const imagePath = `${user.id}/${productData.id}/${image.name}`;
                     console.log("ID del producto recién creado:", productData.id);
-                    console.log("Datos para insertar en product_images:", { product_id: productData.id, image_url: imageUrl });
                     const { error: imageError } = await supabaseClient.storage
                         .from('product_images')
                         .upload(imagePath, image);
@@ -282,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const { data: { publicUrl: imageUrl } } = supabaseClient.storage.from('product_images').getPublicUrl(imagePath);
 
+                    console.log("Datos para insertar en product_images:", { product_id: productData.id, image_url: imageUrl });
                     const { error: productImageError } = await supabaseClient
                         .from('product_images')
                         .insert({ product_id: productData.id, image_url: imageUrl });
@@ -403,12 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
         async function loadPendingProducts() {
             const { data: products, error } = await supabaseClient
                 .from('products')
-                .select(`
+                .select(\`
                     id,
                     name,
                     price,
                     profiles ( id, username )
-                `)
+                \`)
                 .eq('status', 'pending');
 
             if (error) {
@@ -424,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productHTML = '';
             for (const product of products) {
-                productHTML += `
+                productHTML += \`
                     <div class="pending-product-item" id="product-${product.id}">
                         <div class="pending-product-info">
                             <h3>${product.name}</h3>
@@ -435,7 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn btn-secondary reject-btn" data-id="${product.id}">Rechazar</button>
                         </div>
                     </div>
-                `;
+                \`;
             }
             pendingProductsList.innerHTML = productHTML;
         }
@@ -455,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Error al aprobar el producto.');
                 console.error(error);
             } else {
-                document.getElementById(`product-${productId}`).remove();
+                document.getElementById(\`product-${productId}\`).remove();
                 // Aquí llamaríamos a la Edge Function de notificación
                 supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'approved' } });
             }
@@ -468,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(error);
             } else {
                 modal.style.display = 'none';
-                document.getElementById(`product-${productId}`).remove();
+                document.getElementById(\`product-${productId}\`).remove();
                 // Aquí llamaríamos a la Edge Function de notificación
                 supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'rejected', reason: reason } });
             }
@@ -516,16 +505,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productHTML = '';
             for (const product of products) {
-                 productHTML += `
+                 productHTML += \`
                     <div class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : \`$${product.price.toFixed(2)}\`}</p>
                         </div>
                     </div>
-                `;
+                \`;
             }
             featuredAssetGrid.innerHTML = productHTML || '<p>No hay productos destacados en este momento.</p>';
         }
@@ -550,16 +539,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let productHTML = '';
             for (const product of products) {
-                 productHTML += `
+                 productHTML += \`
                     <div class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : \`$${product.price.toFixed(2)}\`}</p>
                         </div>
                     </div>
-                `;
+                \`;
             }
             categoryAssetGrid.innerHTML = productHTML || '<p>No hay productos en esta categoría.</p>';
         }
@@ -571,13 +560,13 @@ document.addEventListener('DOMContentLoaded', () => {
         async function loadApprovedProducts() {
              const { data: products, error } = await supabaseClient
                 .from('products')
-                .select(`
+                .select(\`
                     id,
                     name,
                     price,
                     is_suspended,
                     profiles ( id, username )
-                `)
+                \`)
                 .eq('status', 'approved');
 
             if (error) {
@@ -588,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let productHTML = '';
             for (const product of products) {
                 const suspendButtonText = product.is_suspended ? 'Rehabilitar' : 'Suspender';
-                productHTML += `
+                productHTML += \`
                     <div class="pending-product-item" id="product-approved-${product.id}">
                         <div class="pending-product-info">
                             <h3>${product.name} ${product.is_suspended ? '(Suspendido)' : ''}</h3>
@@ -600,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn btn-danger delete-btn" data-id="${product.id}">Borrar</button>
                         </div>
                     </div>
-                `;
+                \`;
             }
             approvedProductsList.innerHTML = productHTML || '<p>No hay productos aprobados.</p>';
         }
@@ -620,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Actualizar UI
                     target.dataset.suspended = !isSuspended;
                     target.textContent = !isSuspended ? 'Rehabilitar' : 'Suspender';
-                    document.querySelector(`#product-approved-${id} h3`).classList.toggle('suspended-text');
+                    document.querySelector(\`#product-approved-${id} h3\`).classList.toggle('suspended-text');
                     // Notificar
                     supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: !isSuspended ? 'unsuspended' : 'suspended' } });
                 }
@@ -630,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (error) {
                         alert('Error al borrar el producto.');
                     } else {
-                        document.getElementById(`product-approved-${id}`).remove();
+                        document.getElementById(\`product-approved-${id}\`).remove();
                         // Notificar
                         supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
                     }
@@ -802,13 +791,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data, error } = await supabaseClient
                 .from('wishlist_items')
-                .select(`
+                .select(\`
                     products (
                         id,
                         name,
                         price
                     )
-                `)
+                \`)
                 .eq('user_id', user.id);
 
             if (error) {
@@ -825,16 +814,16 @@ document.addEventListener('DOMContentLoaded', () => {
             let productHTML = '<div class="asset-grid">';
             for (const item of data) {
                 const product = item.products;
-                productHTML += `
+                productHTML += \`
                     <div class="asset-card">
                         <button class="wishlist-btn active" data-product-id="${product.id}">❤️</button>
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : \`$${product.price.toFixed(2)}\`}</p>
                         </div>
                     </div>
-                `;
+                \`;
             }
             productHTML += '</div>';
             wishlistDiv.innerHTML = productHTML;
@@ -872,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let productHTML = '<div class="asset-grid">';
             for (const item of data) {
                 const product = item.products;
-                productHTML += `
+                productHTML += \`
                     <div class="asset-card">
                         <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
@@ -880,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="asset-price">Obtenido</p>
                         </div>
                     </div>
-                `;
+                \`;
             }
             productHTML += '</div>';
             purchasedDiv.innerHTML = productHTML;
@@ -956,7 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (confirm(`¿Estás seguro de que quieres gastar ${pointCost} puntos en este asset?`)) {
+        if (confirm(\`¿Estás seguro de que quieres gastar ${pointCost} puntos en este asset?\`)) {
             const newPoints = profile.points - pointCost;
             const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
             if (updateError) {
@@ -965,7 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const productId = button.dataset.productId;
-            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: `Comprado producto #${productId}` });
+            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: -pointCost, description: \`Comprado producto #${productId}\` });
             await supabaseClient.from('user_owned_assets').insert({ user_id: user.id, product_id: productId, purchase_price: price });
 
             alert('¡Compra con puntos exitosa! El asset ha sido añadido a tu colección.');
@@ -1082,6 +1071,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-
-

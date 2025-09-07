@@ -3,9 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend";
 
 // NOTE: These environment variables would be set in the Supabase dashboard
-const RESEND_API_KEY = Deno.env.get("hjesfkbbfugbefncvutvjtrts");
-const SUPABASE_URL = Deno.env.get("https://gfvbhttbscvfeqqhjbbyg .supabase.co");
-const SUPABASE_SERVICE_KEY = Deno.env.get("bvfgjhgvnhjmnbvcbnhgfvgfrhgfdtygfdcvbnmkiuhygfnbvdsxqwtyuiopkwscv,mnefghk.,mnbvdwsx");
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_KEY");
 serve(async (req) => {
   try {
     // 1. Get data from request body
