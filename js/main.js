@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const { data, error } = await supabaseClient.functions.invoke('verify-dev-code', {
                     body: { code: devCode },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
 
                 if (error) throw error;
