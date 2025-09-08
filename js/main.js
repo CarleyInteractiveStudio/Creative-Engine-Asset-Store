@@ -48,19 +48,23 @@ window.addEventListener('load', () => {
             if (error) {
                 alert(`Error al iniciar sesión: ${error.message}`);
             } else {
+                const user = signInData.user;
+                const isAdmin = user.user_metadata && user.user_metadata.is_admin;
+                sessionStorage.setItem('is_admin', isAdmin || false);
+                console.log("DEBUG: 'is_admin' from metadata on login:", isAdmin);
+                console.log("DEBUG: 'is_admin' guardado en sessionStorage como:", sessionStorage.getItem('is_admin'));
+
+                // Fetch points separately
                 const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
-                    .select('points, is_admin')
-                    .eq('id', signInData.user.id)
+                    .select('points')
+                    .eq('id', user.id)
                     .single();
 
                 if (profileError) {
-                    console.error("DEBUG: Error al obtener el perfil:", profileError);
+                    console.error("DEBUG: Error al obtener el perfil (puntos):", profileError);
                 } else if (profile) {
-                    console.log("DEBUG: Perfil obtenido en login:", profile);
                     sessionStorage.setItem('user_points', profile.points);
-                    sessionStorage.setItem('is_admin', profile.is_admin);
-                    console.log("DEBUG: 'is_admin' guardado en sessionStorage como:", sessionStorage.getItem('is_admin'));
                 }
 
                 alert('¡Inicio de sesión exitoso!');
@@ -165,15 +169,21 @@ window.addEventListener('load', () => {
             sessionStorage.removeItem('is_admin');
             updateUserUI(null);
         } else if (session?.user) {
-            if (sessionStorage.getItem('is_admin') === null) {
+            // On page load, check for admin status in metadata and store it
+            const user = session.user;
+            const isAdmin = user.user_metadata && user.user_metadata.is_admin;
+            sessionStorage.setItem('is_admin', isAdmin || false);
+            console.log("DEBUG: 'is_admin' from metadata on auth change:", isAdmin);
+
+            // Fetch points if not already in session storage
+            if (sessionStorage.getItem('user_points') === null) {
                 const { data: profile, error } = await supabaseClient
                     .from('profiles')
-                    .select('points, is_admin')
-                    .eq('id', session.user.id)
+                    .select('points')
+                    .eq('id', user.id)
                     .single();
                 if (!error && profile) {
                     sessionStorage.setItem('user_points', profile.points);
-                    sessionStorage.setItem('is_admin', profile.is_admin);
                 }
             }
             updateUserUI(session.user);
