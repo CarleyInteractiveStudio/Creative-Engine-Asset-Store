@@ -49,6 +49,15 @@ a {
     color: var(--secondary-color);
 }
 
+.dashboard-product-thumbnail {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
 .form-clarification {
     display: block;
     font-size: 0.9em;

@@ -420,17 +420,40 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            if (products.length === 0) {
+            if (!products || products.length === 0) {
                 productListDiv.innerHTML = '<p>No has subido ningún producto todavía.</p>';
                 return;
             }
 
-            let productHTML = '<ul>';
-            for (const product of products) {
-                productHTML += `<li>${product.name} - <strong>Estado:</strong> ${product.status}</li>`;
-            }
-            productHTML += '</ul>';
-            productListDiv.innerHTML = productHTML;
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/100x75.png?text=No+Image';
+                if (!imageError && images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
+                    <div class="pending-product-item">
+                        <img src="${imageUrl}" alt="${product.name}" class="dashboard-product-thumbnail">
+                        <div class="pending-product-info">
+                            <h3>${product.name}</h3>
+                            <p><strong>Estado:</strong> ${product.status}</p>
+                        </div>
+                        <div class="pending-product-actions">
+                            <a href="product.html?id=${product.id}" class="btn btn-secondary">Ver Página</a>
+                            <a href="${product.main_file_url}" class="btn btn-primary" download>Descargar</a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            productListDiv.innerHTML = productHTML.join('');
         }
 
         loadUserProducts();
@@ -495,12 +518,23 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            let productHTML = '';
-            for (const product of products) {
-                productHTML += `
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/100x75.png?text=No+Image';
+                if (!imageError && images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
                     <div class="pending-product-item" id="product-${product.id}">
+                        <img src="${imageUrl}" alt="${product.name}" class="dashboard-product-thumbnail">
                         <div class="pending-product-info">
-                            <h3>${product.name}</h3>
+                            <h3><a href="product.html?id=${product.id}">${product.name}</a></h3>
                             <p>Vendedor: ${product.profiles.username || 'N/A'} | Precio: \$${product.price.toFixed(2)}</p>
                         </div>
                         <div class="pending-product-actions">
@@ -509,8 +543,10 @@ window.addEventListener('load', () => {
                         </div>
                     </div>
                 `;
-            }
-            pendingProductsList.innerHTML = productHTML;
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            pendingProductsList.innerHTML = productHTML.join('');
         }
 
         // Lógica para los botones de Aprobar/Rechazar y el modal
@@ -696,13 +732,24 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            let productHTML = '';
-            for (const product of products) {
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/100x75.png?text=No+Image';
+                if (!imageError && images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
                 const suspendButtonText = product.is_suspended ? 'Rehabilitar' : 'Suspender';
-                productHTML += `
+                return `
                     <div class="pending-product-item" id="product-approved-${product.id}">
+                        <img src="${imageUrl}" alt="${product.name}" class="dashboard-product-thumbnail">
                         <div class="pending-product-info">
-                            <h3>${product.name} ${product.is_suspended ? '(Suspendido)' : ''}</h3>
+                            <h3><a href="product.html?id=${product.id}">${product.name}</a> ${product.is_suspended ? '(Suspendido)' : ''}</h3>
                             <p>Vendedor: ${product.profiles.username || 'N/A'}</p>
                         </div>
                         <div class="pending-product-actions">
@@ -712,8 +759,10 @@ window.addEventListener('load', () => {
                         </div>
                     </div>
                 `;
-            }
-            approvedProductsList.innerHTML = productHTML || '<p>No hay productos aprobados.</p>';
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            approvedProductsList.innerHTML = productHTML.join('') || '<p>No hay productos aprobados.</p>';
         }
         loadApprovedProducts();
 
@@ -737,13 +786,27 @@ window.addEventListener('load', () => {
                 }
             } else if (target.classList.contains('delete-btn')) {
                 if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
-                    const { error } = await supabaseClient.from('products').delete().eq('id', id);
-                    if (error) {
-                        alert('Error al borrar el producto.');
-                    } else {
+                    try {
+                        // First, delete all child records to avoid foreign key constraint errors
+                        await supabaseClient.from('product_images').delete().eq('product_id', id);
+                        await supabaseClient.from('user_owned_assets').delete().eq('product_id', id);
+                        await supabaseClient.from('wishlist_items').delete().eq('product_id', id);
+                        // Add other child tables here if necessary (e.g., points_transactions)
+
+                        // Now, delete the product itself
+                        const { error } = await supabaseClient.from('products').delete().eq('id', id);
+
+                        if (error) {
+                            throw error; // Throw to be caught by the catch block
+                        }
+
                         document.getElementById(`product-approved-${id}`).remove();
                         // Notificar
                         supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
+
+                    } catch (error) {
+                        alert('Error al borrar el producto.');
+                        console.error('Error deleting product and its dependencies:', error);
                     }
                 }
             }
