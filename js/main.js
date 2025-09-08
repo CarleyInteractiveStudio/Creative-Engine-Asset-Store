@@ -532,20 +532,39 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            let productHTML = '';
-            for (const product of products) {
-                 productHTML += `
-                    <div class="asset-card">
+            if (!products || products.length === 0) {
+                featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
+                return;
+            }
+
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (imageError) {
+                    console.error(`Error fetching image for product ${product.id}:`, imageError);
+                } else if (images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
-                    </div>
+                    </a>
                 `;
-            }
-            featuredAssetGrid.innerHTML = productHTML || '<p>No hay productos destacados en este momento.</p>';
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            featuredAssetGrid.innerHTML = productHTML.join('');
         }
         loadFeaturedProducts();
     }
@@ -566,20 +585,39 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            let productHTML = '';
-            for (const product of products) {
-                 productHTML += `
-                    <div class="asset-card">
+            if (!products || products.length === 0) {
+                categoryAssetGrid.innerHTML = '<p>No hay productos en esta categoría.</p>';
+                return;
+            }
+
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (imageError) {
+                    console.error(`Error fetching image for product ${product.id}:`, imageError);
+                } else if (images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
-                    </div>
+                    </a>
                 `;
-            }
-            categoryAssetGrid.innerHTML = productHTML || '<p>No hay productos en esta categoría.</p>';
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            categoryAssetGrid.innerHTML = productHTML.join('');
         }
         loadCategoryProducts();
     }
@@ -835,27 +873,40 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 wishlistDiv.innerHTML = '<p>Tu lista de deseos está vacía.</p>';
                 return;
             }
 
-            let productHTML = '<div class="asset-grid">';
-            for (const item of data) {
+            const productPromises = data.map(async (item) => {
                 const product = item.products;
-                productHTML += `
-                    <div class="asset-card">
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (imageError) {
+                    console.error(`Error fetching image for product ${product.id}:`, imageError);
+                } else if (images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
                         <button class="wishlist-btn active" data-product-id="${product.id}">❤️</button>
-                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
-                    </div>
+                    </a>
                 `;
-            }
-            productHTML += '</div>';
-            wishlistDiv.innerHTML = productHTML;
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            wishlistDiv.innerHTML = '<div class="asset-grid">' + productHTML.join('') + '</div>';
         }
 
         loadWishlist();
@@ -882,26 +933,39 @@ window.addEventListener('load', () => {
                 return;
             }
 
-            if (data.length === 0) {
+            if (!data || data.length === 0) {
                 purchasedDiv.innerHTML = '<p>No has comprado u obtenido ningún asset todavía.</p>';
                 return;
             }
 
-            let productHTML = '<div class="asset-grid">';
-            for (const item of data) {
+            const productPromises = data.map(async (item) => {
                 const product = item.products;
-                productHTML += `
-                    <div class="asset-card">
-                        <img src="https://via.placeholder.com/300x200.png?text=${product.name}" alt="${product.name}" class="asset-image">
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (imageError) {
+                    console.error(`Error fetching image for product ${product.id}:`, imageError);
+                } else if (images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
                             <p class="asset-price">Obtenido</p>
                         </div>
-                    </div>
+                    </a>
                 `;
-            }
-            productHTML += '</div>';
-            purchasedDiv.innerHTML = productHTML;
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            purchasedDiv.innerHTML = '<div class="asset-grid">' + productHTML.join('') + '</div>';
         }
 
         loadPurchasedAssets();
@@ -1029,6 +1093,10 @@ window.addEventListener('load', () => {
     async function handleWishlistClick(e) {
         const button = e.target.closest('.wishlist-btn, .wishlist-btn-large');
         if (!button) return;
+
+        // Prevent the parent link from being followed
+        e.preventDefault();
+        e.stopPropagation();
 
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
