@@ -20,6 +20,18 @@ const supabaseClient = createClient(supabaseUrl, supabaseKey);
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Creative Engine Asset Store script cargado.");
 
+    // --- Protección de Rutas de Admin ---
+    if (window.location.pathname.includes('admin.html')) {
+        // Se usa un timeout para dar tiempo a que onAuthStateChange se ejecute primero
+        setTimeout(() => {
+            const isAdmin = sessionStorage.getItem('is_admin') === 'true';
+            if (!isAdmin) {
+                console.warn("Acceso denegado. Se requiere rol de administrador.");
+                window.location.href = 'index.html';
+            }
+        }, 500); // 500ms de espera, ajustar si es necesario
+    }
+
     // Lógica para la página de inicio de sesión
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -123,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <a href="#" id="logout-btn">Cerrar Sesión</a>
             `;
         } else {
-            // Usuario no está logueado
             dropdownHTML = `
                 <a href="login.html">Iniciar Sesión</a>
                 <a href="register.html">Registrarse</a>
