@@ -204,6 +204,19 @@ window.addEventListener('load', () => {
             }
         });
 
+        const priceInput = document.getElementById('price');
+        const priceClarification = document.getElementById('price-clarification');
+
+        if (priceInput && priceClarification) {
+            priceInput.addEventListener('input', (e) => {
+                if (e.target.value === '0') {
+                    priceClarification.textContent = 'El producto se marcará como Gratuito.';
+                } else {
+                    priceClarification.textContent = '';
+                }
+            });
+        }
+
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -347,28 +360,50 @@ window.addEventListener('load', () => {
                 payoutHistoryList.innerHTML = historyHTML;
             }
 
-            // --- Cargar Resumen de Ganancias (Simulado) ---
+            // --- Cargar Resumen de Ganancias (Real) ---
             const earningsDiv = document.getElementById('earnings-data');
-            // Simular ventas para este usuario
-            const simulatedSales = [
-                { price: 10.00 }, { price: 25.00 }, { price: 5.00 }, { price: 12.00 }
-            ];
-            const totalRevenue = simulatedSales.reduce((sum, sale) => sum + sale.price, 0);
-            let commissionRate = 0.10;
-            if (totalRevenue > 500) {
-                commissionRate = 0.20;
-            } else if (totalRevenue > 100) {
-                commissionRate = 0.15;
-            }
-            const commissionAmount = totalRevenue * commissionRate;
-            const netPayout = totalRevenue - commissionAmount;
 
-            earningsDiv.innerHTML = `
-                <div class="earning-item">Ingresos Totales: <strong>\$${totalRevenue.toFixed(2)}</strong></div>
-                <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-\$${commissionAmount.toFixed(2)}</strong></div>
-                <div class="earning-item">Pago Neto Estimado: <strong>\$${netPayout.toFixed(2)}</strong></div>
-                <div class="earning-item">Próximo Día de Pago: <strong>Fin de mes</strong></div>
-            `;
+            // 1. Get all products for the current seller
+            const { data: sellerProducts, error: productsError } = await supabaseClient
+                .from('products')
+                .select('id')
+                .eq('seller_id', user.id);
+
+            if (productsError) {
+                console.error('Error fetching seller products for earnings:', productsError);
+                earningsDiv.innerHTML = '<p class="error">No se pudieron calcular las ganancias.</p>';
+            } else {
+                const productIds = sellerProducts.map(p => p.id);
+
+                // 2. Get all sales for those products
+                const { data: sales, error: salesError } = await supabaseClient
+                    .from('user_owned_assets')
+                    .select('purchase_price')
+                    .in('product_id', productIds);
+
+                if (salesError) {
+                    console.error('Error fetching sales for earnings:', salesError);
+                    earningsDiv.innerHTML = '<p class="error">No se pudieron calcular las ganancias.</p>';
+                } else {
+                    const totalRevenue = sales.reduce((sum, sale) => sum + (sale.purchase_price || 0), 0);
+
+                    let commissionRate = 0.10; // 10% base commission
+                    if (totalRevenue > 500) {
+                        commissionRate = 0.20; // 20% for high earners
+                    } else if (totalRevenue > 100) {
+                        commissionRate = 0.15; // 15% for medium earners
+                    }
+                    const commissionAmount = totalRevenue * commissionRate;
+                    const netPayout = totalRevenue - commissionAmount;
+
+                    earningsDiv.innerHTML = `
+                        <div class="earning-item">Ingresos Totales: <strong>\$${totalRevenue.toFixed(2)}</strong></div>
+                        <div class="earning-item">Comisión de la Tienda (${commissionRate * 100}%): <strong>-\$${commissionAmount.toFixed(2)}</strong></div>
+                        <div class="earning-item">Pago Neto Estimado: <strong>\$${netPayout.toFixed(2)}</strong></div>
+                        <div class="earning-item">Próximo Día de Pago: <strong>Fin de mes</strong></div>
+                    `;
+                }
+            }
 
 
             const { data: products, error } = await supabaseClient
@@ -411,11 +446,29 @@ window.addEventListener('load', () => {
                 .eq('status', 'approved');
             document.getElementById('stats-total-products').textContent = countError ? 'N/A' : count;
 
-            // 2. Ingresos (simulado)
-            const totalRevenue = 12540.50;
-            const monthlySales = 1850.75;
-            document.getElementById('stats-total-revenue').textContent = `\$${totalRevenue.toFixed(2)}`;
-            document.getElementById('stats-monthly-sales').textContent = `\$${monthlySales.toFixed(2)}`;
+            // 2. Ingresos (Real)
+            const { data: allSales, error: salesError } = await supabaseClient
+                .from('user_owned_assets')
+                .select('purchase_price, created_at');
+
+            if (salesError) {
+                console.error('Error fetching all sales for admin stats:', salesError);
+                document.getElementById('stats-total-revenue').textContent = 'N/A';
+                document.getElementById('stats-monthly-sales').textContent = 'N/A';
+            } else {
+                const totalRevenue = allSales.reduce((sum, sale) => sum + (sale.purchase_price || 0), 0);
+                document.getElementById('stats-total-revenue').textContent = `\$${totalRevenue.toFixed(2)}`;
+
+                // Calculate this month's sales
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+                const monthlySales = allSales
+                    .filter(sale => new Date(sale.created_at) >= startOfMonth)
+                    .reduce((sum, sale) => sum + (sale.purchase_price || 0), 0);
+
+                document.getElementById('stats-monthly-sales').textContent = `\$${monthlySales.toFixed(2)}`;
+            }
         }
 
         async function loadPendingProducts() {
@@ -976,15 +1029,18 @@ window.addEventListener('load', () => {
     if (productActions) {
         const buyButton = productActions.querySelector('.btn-buy');
         const freeButton = productActions.querySelector('.btn-get-free');
-        const price = parseFloat(buyButton.dataset.price);
 
-        if (price === 0) {
-            buyButton.style.display = 'none';
-            freeButton.style.display = 'inline-block';
-            // Actualizar también el texto del precio
-            const priceDisplay = document.querySelector('.product-info-panel .product-price');
-            if (priceDisplay) {
-                priceDisplay.textContent = 'Gratis';
+        if (buyButton && freeButton) {
+            const price = parseFloat(buyButton.dataset.price);
+
+            if (price === 0) {
+                buyButton.style.display = 'none';
+                freeButton.style.display = 'inline-block';
+                // Actualizar también el texto del precio
+                const priceDisplay = document.querySelector('.product-info-panel .product-price');
+                if (priceDisplay) {
+                    priceDisplay.textContent = 'Gratis';
+                }
             }
         }
     }
@@ -1166,5 +1222,114 @@ window.addEventListener('load', () => {
                 document.getElementById(tabId).classList.add('active');
             });
         });
+    }
+
+    // --- Lógica para la página de producto ---
+    if (window.location.pathname.includes('product.html')) {
+        async function loadProductDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            if (!productId) {
+                document.querySelector('.container').innerHTML = '<h1>Producto no encontrado</h1><p>El ID del producto no se encontró en la URL.</p>';
+                return;
+            }
+
+            // 1. Fetch product and seller info
+            const { data: product, error: productError } = await supabaseClient
+                .from('products')
+                .select('*, profiles(username)')
+                .eq('id', productId)
+                .single();
+
+            if (productError || !product) {
+                console.error('Error fetching product:', productError);
+                document.querySelector('.container').innerHTML = '<h1>Error</h1><p>No se pudo cargar el producto. Es posible que no exista o haya sido eliminado.</p>';
+                return;
+            }
+
+            // 2. Fetch product images
+            const { data: images, error: imageError } = await supabaseClient
+                .from('product_images')
+                .select('image_url')
+                .eq('product_id', productId);
+
+            // 3. Populate the page
+            document.title = `${product.name} - Creative Engine Asset Store`;
+            document.querySelector('.product-title').textContent = product.name;
+            document.querySelector('.product-author a').textContent = product.profiles.username || 'Vendedor Desconocido';
+            document.querySelector('.product-price').textContent = product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`;
+            document.querySelector('.product-description').innerHTML = `<h2>Descripción</h2><p>${product.description.replace(/\n/g, '<br>')}</p>`;
+
+            const mainMediaContainer = document.querySelector('.main-media');
+            const thumbnailGallery = document.querySelector('.thumbnail-gallery');
+            thumbnailGallery.innerHTML = ''; // Clear placeholders
+
+            let mediaItems = [];
+            if (images && images.length > 0) {
+                mediaItems = images.map(img => ({ type: 'image', url: img.image_url }));
+            }
+            if (product.youtube_url) {
+                mediaItems.unshift({ type: 'video', url: product.youtube_url });
+            }
+
+            function displayMedia(media) {
+                if (media.type === 'image') {
+                    mainMediaContainer.innerHTML = `<img src="${media.url}" alt="${product.name}">`;
+                } else if (media.type === 'video') {
+                    const videoId = media.url.split('v=')[1]?.split('&')[0] || media.url.split('/').pop();
+                    mainMediaContainer.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                }
+            }
+
+            if (mediaItems.length > 0) {
+                displayMedia(mediaItems[0]);
+
+                mediaItems.forEach((media, index) => {
+                    const thumb = document.createElement('img');
+                    thumb.classList.add('thumbnail');
+                    if (index === 0) thumb.classList.add('active');
+
+                    if (media.type === 'image') {
+                        thumb.src = media.url;
+                    } else {
+                        const videoId = media.url.split('v=')[1]?.split('&')[0] || media.url.split('/').pop();
+                        thumb.src = `https://img.youtube.com/vi/${videoId}/0.jpg`;
+                    }
+
+                    thumb.addEventListener('click', () => {
+                        displayMedia(media);
+                        document.querySelectorAll('.thumbnail.active').forEach(t => t.classList.remove('active'));
+                        thumb.classList.add('active');
+                    });
+                    thumbnailGallery.appendChild(thumb);
+                });
+            } else {
+                 mainMediaContainer.innerHTML = `<img src="https://via.placeholder.com/560x315.png?text=No+Media" alt="No media available">`;
+            }
+
+            const buyPointsBtn = document.querySelector('.btn-buy-points');
+            const getFreeBtn = document.querySelector('.btn-get-free');
+            const wishlistBtn = document.querySelector('.wishlist-btn-large');
+            const paypalContainer = document.getElementById('paypal-button-container');
+
+            buyPointsBtn.dataset.productId = product.id;
+            buyPointsBtn.dataset.price = product.price;
+            getFreeBtn.dataset.productId = product.id;
+            wishlistBtn.dataset.productId = product.id;
+
+            buyPointsBtn.textContent = `Comprar (${product.price * 100} Puntos)`;
+
+            if (product.price === 0) {
+                paypalContainer.style.display = 'none';
+                buyPointsBtn.style.display = 'none';
+                getFreeBtn.style.display = 'inline-block';
+            } else {
+                 paypalContainer.style.display = 'block';
+                 buyPointsBtn.style.display = 'inline-block';
+                 getFreeBtn.style.display = 'none';
+            }
+        }
+        loadProductDetails();
     }
 });

@@ -49,6 +49,14 @@ a {
     color: var(--secondary-color);
 }
 
+.form-clarification {
+    display: block;
+    font-size: 0.9em;
+    font-style: italic;
+    color: #555;
+    margin-top: 5px;
+}
+
 .main-header .main-nav ul {
     margin: 0;
     padding: 0;
