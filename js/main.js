@@ -55,10 +55,12 @@ window.addEventListener('load', () => {
                     .single();
 
                 if (profileError) {
-                    console.error("Error al obtener el perfil:", profileError);
+                    console.error("DEBUG: Error al obtener el perfil:", profileError);
                 } else if (profile) {
+                    console.log("DEBUG: Perfil obtenido en login:", profile);
                     sessionStorage.setItem('user_points', profile.points);
                     sessionStorage.setItem('is_admin', profile.is_admin);
+                    console.log("DEBUG: 'is_admin' guardado en sessionStorage como:", sessionStorage.getItem('is_admin'));
                 }
 
                 alert('¡Inicio de sesión exitoso!');
@@ -119,6 +121,8 @@ window.addEventListener('load', () => {
         if (user) {
             const userPoints = sessionStorage.getItem('user_points') || 0;
             const isAdmin = sessionStorage.getItem('is_admin') === 'true';
+            console.log("DEBUG: En updateUserUI, valor de sessionStorage 'is_admin':", sessionStorage.getItem('is_admin'));
+            console.log("DEBUG: En updateUserUI, la variable 'isAdmin' es:", isAdmin);
 
             let adminLink = '';
             if (isAdmin) {
