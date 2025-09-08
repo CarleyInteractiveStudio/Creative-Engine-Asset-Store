@@ -49,7 +49,7 @@ window.addEventListener('load', () => {
                 alert(`Error al iniciar sesión: ${error.message}`);
             } else {
                 const user = signInData.user;
-                const isAdmin = user.user_metadata && user.user_metadata.is_admin;
+                const isAdmin = user.app_metadata && user.app_metadata.is_admin;
                 sessionStorage.setItem('is_admin', isAdmin || false);
                 console.log("DEBUG: 'is_admin' from metadata on login:", isAdmin);
                 console.log("DEBUG: 'is_admin' guardado en sessionStorage como:", sessionStorage.getItem('is_admin'));
@@ -171,7 +171,7 @@ window.addEventListener('load', () => {
         } else if (session?.user) {
             // On page load, check for admin status in metadata and store it
             const user = session.user;
-            const isAdmin = user.user_metadata && user.user_metadata.is_admin;
+            const isAdmin = user.app_metadata && user.app_metadata.is_admin;
             sessionStorage.setItem('is_admin', isAdmin || false);
             console.log("DEBUG: 'is_admin' from metadata on auth change:", isAdmin);
 
