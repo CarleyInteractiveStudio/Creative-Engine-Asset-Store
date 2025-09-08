@@ -593,11 +593,14 @@ window.addEventListener('load', () => {
             }
 
             const productPromises = products.map(async (product) => {
+                console.log("DEBUG: Fetching image for product:", product.id);
                 const { data: images, error: imageError } = await supabaseClient
                     .from('product_images')
                     .select('image_url')
                     .eq('product_id', product.id)
                     .limit(1);
+
+                console.log("DEBUG: Image query result for product " + product.id, { images, imageError });
 
                 let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
                 if (imageError) {
@@ -605,6 +608,8 @@ window.addEventListener('load', () => {
                 } else if (images && images.length > 0) {
                     imageUrl = images[0].image_url;
                 }
+
+                console.log("DEBUG: Final image URL for product " + product.id, imageUrl);
 
                 return `
                     <a href="product.html?id=${product.id}" class="asset-card">
