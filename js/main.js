@@ -268,7 +268,8 @@ window.addEventListener('load', () => {
                 // 1. Subir archivo principal
                 overlayMessage.textContent = 'Subiendo archivo principal...';
                 const timestamp = Date.now();
-                const mainFilePath = `${user.id}/${timestamp}-${mainFile.name}`;
+                const sanitizedMainFileName = mainFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+                const mainFilePath = `${user.id}/${timestamp}-${sanitizedMainFileName}`;
                 const { error: mainFileError } = await supabaseClient.storage
                     .from('product_files')
                     .upload(mainFilePath, mainFile);
@@ -298,7 +299,8 @@ window.addEventListener('load', () => {
                 for (let i = 0; i < images.length; i++) {
                     const image = images[i];
                     overlayMessage.textContent = `Subiendo imagen ${i + 1} de ${images.length}...`;
-                    const imagePath = `${user.id}/${productData.id}/${image.name}`;
+                    const sanitizedImageName = image.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+                    const imagePath = `${user.id}/${productData.id}/${sanitizedImageName}`;
                     const { error: imageError } = await supabaseClient.storage
                         .from('product_images')
                         .upload(imagePath, image);
