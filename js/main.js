@@ -17,7 +17,7 @@ if (supabaseUrl === 'TU_SUPABASE_URL' || supabaseKey === 'TU_SUPABASE_KEY') {
 
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('load', () => {
     console.log("Creative Engine Asset Store script cargado.");
 
     // --- Protección de Rutas de Admin ---
