@@ -787,26 +787,44 @@ window.addEventListener('load', () => {
             } else if (target.classList.contains('delete-btn')) {
                 if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
                     try {
-                        // First, delete all child records to avoid foreign key constraint errors
+                        // --- Client-Side Deletion of Storage and DB records ---
+
+                        // 1. Get all file paths associated with the product
+                        const { data: images, error: imageError } = await supabaseClient
+                            .from('product_images').select('image_url').eq('product_id', id);
+
+                        const { data: product, error: productError } = await supabaseClient
+                            .from('products').select('main_file_url').eq('id', id).single();
+
+                        if (imageError || productError) throw imageError || productError;
+
+                        // 2. Delete files from Storage
+                        if (images && images.length > 0) {
+                            const imagePaths = images.map(img => img.image_url.split('/product_images/')[1]);
+                            const { error: storageImageError } = await supabaseClient.storage.from('product_images').remove(imagePaths);
+                            if (storageImageError) console.error('Error deleting images from storage:', storageImageError);
+                        }
+                        if (product && product.main_file_url) {
+                            const mainFilePath = product.main_file_url.split('/product_files/')[1];
+                            const { error: storageMainFileError } = await supabaseClient.storage.from('product_files').remove([mainFilePath]);
+                            if (storageMainFileError) console.error('Error deleting main file from storage:', storageMainFileError);
+                        }
+
+                        // 3. Delete database records
                         await supabaseClient.from('product_images').delete().eq('product_id', id);
                         await supabaseClient.from('user_owned_assets').delete().eq('product_id', id);
                         await supabaseClient.from('wishlist_items').delete().eq('product_id', id);
-                        // Add other child tables here if necessary (e.g., points_transactions)
 
-                        // Now, delete the product itself
-                        const { error } = await supabaseClient.from('products').delete().eq('id', id);
+                        const { error: productDeleteError } = await supabaseClient.from('products').delete().eq('id', id);
+                        if (productDeleteError) throw productDeleteError;
 
-                        if (error) {
-                            throw error; // Throw to be caught by the catch block
-                        }
-
+                        // 4. Update UI
+                        alert('Producto borrado exitosamente.');
                         document.getElementById(`product-approved-${id}`).remove();
-                        // Notificar
-                        supabaseClient.functions.invoke('send-product-status-email', { body: { productId: id, status: 'deleted' } });
 
                     } catch (error) {
-                        alert('Error al borrar el producto.');
-                        console.error('Error deleting product and its dependencies:', error);
+                        alert('Error al borrar el producto y sus archivos.');
+                        console.error('Error during full deletion process:', error);
                     }
                 }
             }
