@@ -1417,13 +1417,8 @@ function initializeApp() {
     }
 }
 
-// Initial load
-window.addEventListener('load', initializeApp);
-
-// Handle back/forward cache
+// Use pageshow for all navigation types to ensure initialization.
 window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-        console.log("Page restored from bfcache. Re-initializing.");
-        initializeApp();
-    }
+    console.log(`Page show event fired. Persisted: ${event.persisted}`);
+    initializeApp();
 });
