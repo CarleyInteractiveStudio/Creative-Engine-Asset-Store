@@ -1417,13 +1417,5 @@ function initializeApp() {
     }
 }
 
-// Run on initial load when the DOM is ready.
-document.addEventListener('DOMContentLoaded', initializeApp);
-
-// Re-run if the page is shown from the back/forward cache.
-window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-        console.log("Page restored from bfcache. Re-initializing.");
-        initializeApp();
-    }
-});
+// The defer attribute on the script tag ensures this runs after the DOM is parsed.
+initializeApp();
