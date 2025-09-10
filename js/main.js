@@ -1417,8 +1417,13 @@ function initializeApp() {
     }
 }
 
-// Use pageshow for all navigation types to ensure initialization.
+// Run on initial load when the DOM is ready.
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+// Re-run if the page is shown from the back/forward cache.
 window.addEventListener('pageshow', (event) => {
-    console.log(`Page show event fired. Persisted: ${event.persisted}`);
-    initializeApp();
+    if (event.persisted) {
+        console.log("Page restored from bfcache. Re-initializing.");
+        initializeApp();
+    }
 });
