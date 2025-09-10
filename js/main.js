@@ -17,8 +17,8 @@ if (supabaseUrl === 'TU_SUPABASE_URL' || supabaseKey === 'TU_SUPABASE_KEY') {
 
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-window.addEventListener('load', () => {
-    console.log("Creative Engine Asset Store script cargado.");
+function initializeApp() {
+    console.log("Creative Engine Asset Store script initializing...");
 
     // --- Protección de Rutas de Admin ---
     if (window.location.pathname.includes('admin.html')) {
@@ -1414,5 +1414,16 @@ window.addEventListener('load', () => {
             }
         }
         loadProductDetails();
+    }
+}
+
+// Initial load
+window.addEventListener('load', initializeApp);
+
+// Handle back/forward cache
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        console.log("Page restored from bfcache. Re-initializing.");
+        initializeApp();
     }
 });
