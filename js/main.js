@@ -1310,8 +1310,10 @@ window.addEventListener('load', () => {
     // --- Lógica para la página de producto ---
     if (window.location.pathname.includes('product.html')) {
         async function loadProductDetails() {
+            console.log("DEBUG: loadProductDetails function started.");
             const urlParams = new URLSearchParams(window.location.search);
             const productId = urlParams.get('id');
+            console.log("DEBUG: Fetched productId from URL:", productId);
 
             if (!productId) {
                 document.querySelector('.container').innerHTML = '<h1>Producto no encontrado</h1><p>El ID del producto no se encontró en la URL.</p>';
@@ -1331,11 +1333,15 @@ window.addEventListener('load', () => {
                 return;
             }
 
+            console.log("DEBUG: Successfully fetched product data:", product);
+
             // 2. Fetch product images
             const { data: images, error: imageError } = await supabaseClient
                 .from('product_images')
                 .select('image_url')
                 .eq('product_id', productId);
+
+            console.log("DEBUG: Fetched product images:", { images, imageError });
 
             // 3. Populate the page
             document.title = `${product.name} - Creative Engine Asset Store`;
