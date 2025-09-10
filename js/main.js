@@ -1,7 +1,8 @@
-// Scripts para la Creative Engine Asset Store
+document.addEventListener('DOMContentLoaded', () => {
+    // Scripts para la Creative Engine Asset Store
 
-// Advertencia para el desarrollador sobre la configuración de PayPal
-if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
+    // Advertencia para el desarrollador sobre la configuración de PayPal
+    if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
     console.warn("ADVERTENCIA: El SDK de PayPal está usando un Client ID de prueba. Reemplaza 'YOUR_SANDBOX_CLIENT_ID' en product.html para que los pagos funcionen.");
 }
 
@@ -17,11 +18,11 @@ if (supabaseUrl === 'TU_SUPABASE_URL' || supabaseKey === 'TU_SUPABASE_KEY') {
 
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-function initializeApp() {
-    console.log("Creative Engine Asset Store script initializing...");
+// The defer attribute on the script tag ensures this runs after the DOM is parsed.
+console.log("Creative Engine Asset Store script loaded.");
 
-    // --- Protección de Rutas de Admin ---
-    if (window.location.pathname.includes('admin.html')) {
+// --- Protección de Rutas de Admin ---
+if (window.location.pathname.includes('admin.html')) {
         // Se usa un timeout para dar tiempo a que onAuthStateChange se ejecute primero
         setTimeout(() => {
             const isAdmin = sessionStorage.getItem('is_admin') === 'true';
@@ -123,10 +124,20 @@ function initializeApp() {
 
         let dropdownHTML = '';
         if (user) {
+            // If data isn't in session, fetch it now.
+            if (sessionStorage.getItem('is_admin') === null) {
+                // We need to get the user object again here to access app_metadata securely
+                const { data: { user: authedUser } } = await supabaseClient.auth.getUser();
+                const isAdmin = authedUser.app_metadata && authedUser.app_metadata.is_admin;
+                sessionStorage.setItem('is_admin', isAdmin || false);
+            }
+            if (sessionStorage.getItem('user_points') === null) {
+                const { data: profile } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
+                sessionStorage.setItem('user_points', profile ? profile.points : 0);
+            }
+
             const userPoints = sessionStorage.getItem('user_points') || 0;
             const isAdmin = sessionStorage.getItem('is_admin') === 'true';
-            console.log("DEBUG: En updateUserUI, valor de sessionStorage 'is_admin':", sessionStorage.getItem('is_admin'));
-            console.log("DEBUG: En updateUserUI, la variable 'isAdmin' es:", isAdmin);
 
             let adminLink = '';
             if (isAdmin) {
@@ -152,44 +163,19 @@ function initializeApp() {
         }
         configDropdown.innerHTML = dropdownHTML;
 
-        // Añadir listener al botón de logout si existe
         const logoutButton = document.getElementById('logout-btn');
         if (logoutButton) {
             logoutButton.addEventListener('click', async (e) => {
                 e.preventDefault();
                 await supabaseClient.auth.signOut();
-                // onAuthStateChange se encargará de recargar la UI
             });
         }
     }
 
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-            sessionStorage.removeItem('user_points');
-            sessionStorage.removeItem('is_admin');
-            updateUserUI(null);
-        } else if (session?.user) {
-            // On page load, check for admin status in metadata and store it
-            const user = session.user;
-            const isAdmin = user.app_metadata && user.app_metadata.is_admin;
-            sessionStorage.setItem('is_admin', isAdmin || false);
-            console.log("DEBUG: 'is_admin' from metadata on auth change:", isAdmin);
-
-            // Fetch points if not already in session storage
-            if (sessionStorage.getItem('user_points') === null) {
-                const { data: profile, error } = await supabaseClient
-                    .from('profiles')
-                    .select('points')
-                    .eq('id', user.id)
-                    .single();
-                if (!error && profile) {
-                    sessionStorage.setItem('user_points', profile.points);
-                }
-            }
-            updateUserUI(session.user);
-        } else {
-            updateUserUI(null);
-        }
+    // Simplified, synchronous listener, as per the old working code.
+    // updateUserUI is async and will handle fetching any necessary data.
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        updateUserUI(session?.user);
     });
 
     // Lógica para la página de subida de productos
@@ -1415,7 +1401,4 @@ function initializeApp() {
         }
         loadProductDetails();
     }
-}
-
-// The defer attribute on the script tag ensures this runs after the DOM is parsed.
-initializeApp();
+});
