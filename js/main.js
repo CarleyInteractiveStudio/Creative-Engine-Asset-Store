@@ -826,34 +826,65 @@ if (window.location.pathname.includes('admin.html')) {
         if (typeof paypal !== 'undefined') {
             paypal.Buttons({
                 async createOrder() {
-                    try {
-                        const { data, error } = await supabaseClient.functions.invoke('paypal-create-order', {
-                            body: { productId },
-                        });
-                        if (error) throw new Error(error.message);
-                        return data.orderID;
-                    } catch (err) {
-                        console.error('Error al crear la orden de PayPal:', err);
-                        alert('No se pudo iniciar el proceso de pago. Inténtalo de nuevo.');
+                    const productIdElement = document.querySelector('.product-actions .btn-buy-points');
+                    const productId = productIdElement ? productIdElement.dataset.productId : null;
+
+                    if (!productId) {
+                        console.error("PayPal createOrder error: Could not find product ID on the page.");
+                        alert("Error: No se pudo encontrar la información del producto para iniciar el pago.");
+                        // Must return a rejected promise to notify the PayPal SDK of failure
+                        return Promise.reject(new Error("Product ID not found"));
                     }
+
+                    const { data, error } = await supabaseClient.functions.invoke('paypal-create-order', {
+                        body: { productId },
+                    });
+
+                    if (error) {
+                        console.error("Error invoking Edge Function 'paypal-create-order':", error);
+                        // The detailed error from our modified function is in the 'data' object
+                        console.error("Detailed error data from function:", data);
+                        const detailedMessage = data?.errorMessage || error.message;
+                        // Re-throw the error to be caught by the PayPal SDK's onError handler
+                        throw new Error(`Edge Function failed: ${detailedMessage}`);
+                    }
+
+                    if (!data || !data.orderID) {
+                        console.error("Invalid response from 'paypal-create-order'. Missing orderID:", data);
+                        throw new Error("Did not receive a valid order ID from the server.");
+                    }
+
+                    return data.orderID;
                 },
                 async onApprove(data) {
-                    try {
-                        const { data: responseData, error } = await supabaseClient.functions.invoke('paypal-capture-order', {
-                            body: { orderID: data.orderID, productId },
-                        });
-                        if (error) throw new Error(error.message);
+                    // The 'data' object from onApprove contains orderID, payerID etc.
+                    const productIdElement = document.querySelector('.product-actions .btn-buy-points');
+                    const productId = productIdElement ? productIdElement.dataset.productId : null;
 
-                        alert('¡Compra exitosa! El asset ha sido añadido a tu colección.');
-                        window.location.href = 'my-assets.html';
-                    } catch (err) {
-                        console.error('Error al capturar el pago de PayPal:', err);
-                        alert('Hubo un error al procesar tu pago. Por favor, contacta a soporte.');
+                    if (!productId) {
+                         alert('Error crítico: No se pudo encontrar el ID del producto después de la aprobación. Contacta a soporte.');
+                         return;
                     }
+
+                    const { data: responseData, error } = await supabaseClient.functions.invoke('paypal-capture-order', {
+                        body: { orderID: data.orderID, productId: productId },
+                    });
+
+                    if (error) {
+                        console.error("Error invoking Edge Function 'paypal-capture-order':", error);
+                        console.error("Detailed error data from function:", responseData);
+                        const detailedMessage = responseData?.errorMessage || "Error procesando el pago.";
+                        // Throwing here will trigger the onError handler below
+                        throw new Error(detailedMessage);
+                    }
+
+                    alert('¡Compra exitosa! El asset ha sido añadido a tu colección.');
+                    window.location.href = 'my-assets.html';
                 },
                 onError(err) {
-                    console.error('Error en el SDK de PayPal:', err);
-                    alert('Ocurrió un error inesperado con PayPal. Por favor, recarga la página.');
+                    // This catches errors from createOrder and onApprove
+                    console.error('An error occurred in the PayPal SDK. This is often caused by an error in createOrder or onApprove. See previous logs for details.', err);
+                    alert(`Ocurrió un error en el proceso de pago: ${err.message}. Por favor, revisa la consola del navegador (F12) para más detalles.`);
                 }
             }).render('#paypal-button-container');
         } else {

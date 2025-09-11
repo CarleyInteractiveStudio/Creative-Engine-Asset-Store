@@ -84,7 +84,15 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Log the full error to the Supabase function logs for better debugging
+    console.error("Error in paypal-create-order:", error);
+
+    // Return a more detailed error message to the client
+    return new Response(JSON.stringify({
+        error: "A detailed error occurred in the Edge Function.",
+        errorMessage: error.message,
+        errorStack: error.stack,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
