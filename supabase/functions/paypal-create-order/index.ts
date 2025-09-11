@@ -26,6 +26,9 @@ async function getPayPalAccessToken() {
     body: "grant_type=client_credentials",
   });
   const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`PayPal auth failed: ${JSON.stringify(data)}`);
+  }
   return data.access_token;
 }
 
@@ -47,11 +50,14 @@ serve(async (req) => {
       .single();
 
     if (productError || !product) {
-      throw new Error("Product not found.");
+      throw new Error(`Product not found or database error: ${productError?.message}`);
     }
 
     // 2. Get PayPal Access Token
     const accessToken = await getPayPalAccessToken();
+    if(!accessToken) {
+        throw new Error("Failed to get PayPal access token. Check credentials.");
+    }
 
     // 3. Create a PayPal order
     const orderPayload = {
@@ -80,7 +86,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
-      throw new Error(orderData.message || "Failed to create PayPal order.");
+      throw new Error(orderData.message || `Failed to create PayPal order: ${JSON.stringify(orderData)}`);
     }
 
   } catch (error) {
