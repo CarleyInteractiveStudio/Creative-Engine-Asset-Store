@@ -1,109 +1,88 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const supabaseUrl = 'TU_SUPABASE_URL';
-    const supabaseKey = 'TU_SUPABASE_KEY';
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-    // Guard to run only on my-assets page
-    const tabs = document.querySelector('.tabs');
-    if (!tabs) return;
-
-    // Tab switching logic
-    const tabLinks = document.querySelectorAll('.tab-link');
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            const tabId = link.getAttribute('data-tab');
-            tabLinks.forEach(item => item.classList.remove('active'));
-            tabContents.forEach(item => item.classList.remove('active'));
-            link.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        });
-    });
-
-    // Load Wishlist
-    const wishlistDiv = document.getElementById('wishlist-assets-list');
-    async function loadWishlist() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) { window.location.href = 'login.html'; return; }
-        const { data, error } = await supabaseClient.from('wishlist_items').select(`products (id, name, price, product_images(image_url))`).eq('user_id', user.id);
-        if (error) {
-            wishlistDiv.innerHTML = '<p class="error">Could not load wishlist.</p>';
-            return;
-        }
-        if (data.length === 0) {
-            wishlistDiv.innerHTML = '<p>Your wishlist is empty.</p>';
-            return;
-        }
-        let productHTML = '<div class="asset-grid">';
-        for (const item of data) {
-            const product = item.products;
-                const imageUrl = product.product_images.length > 0 ? product.product_images[0].image_url : 'https://via.placeholder.com/300x200.png?text=No+Image';
-            productHTML += `
-                <div class="asset-card">
-                    <button class="wishlist-btn active" data-product-id="${product.id}">❤️</button>
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                    <div class="asset-info">
-                        <h3 class="asset-title">${product.name}</h3>
-                        <p class="asset-price">${product.price === 0 ? 'Gratis' : `$${product.price.toFixed(2)}`}</p>
-                    </div>
-                </div>`;
-        }
-        productHTML += '</div>';
-        wishlistDiv.innerHTML = productHTML;
-    }
-
-    // Load Purchased Assets
-    const purchasedDiv = document.getElementById('purchased-assets-list');
-    async function loadPurchasedAssets() {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) { window.location.href = 'login.html'; return; }
-        const { data, error } = await supabaseClient.from('user_owned_assets').select('products(*, product_images(image_url))').eq('user_id', user.id);
-        if (error) {
-            purchasedDiv.innerHTML = '<p class="error">Could not load your assets.</p>';
-            return;
-        }
-        if (data.length === 0) {
-            purchasedDiv.innerHTML = '<p>You have not purchased or obtained any assets yet.</p>';
-            return;
-        }
-        let productHTML = '<div class="asset-grid">';
-        for (const item of data) {
-            const product = item.products;
-            const imageUrl = product.product_images.length > 0 ? product.product_images[0].image_url : 'https://via.placeholder.com/300x200.png?text=No+Image';
-            productHTML += `
-                <div class="asset-card">
-                    <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                    <div class="asset-info">
-                        <h3 class="asset-title">${product.name}</h3>
-                        <p class="asset-price">Obtained</p>
-                    </div>
-                </div>`;
-        }
-        productHTML += '</div>';
-        purchasedDiv.innerHTML = productHTML;
-    }
-
-    // Earn Points Button
     const earnPointsBtn = document.getElementById('earn-points-btn');
-    earnPointsBtn.addEventListener('click', async () => {
+
+    if (!earnPointsBtn) return;
+
+    // This function is called by the AppLixir SDK when the ad status changes.
+    function adStatusCallback(status) {
+        console.log('Ad Status from AppLixir:', status);
+
+        // We assume 'ad-reward' is the status for a successfully completed ad.
+        // This should be verified with AppLixir's documentation if issues arise.
+        if (status === 'ad-reward') {
+            console.log('Ad completed, attempting to reward user...');
+            earnPointsBtn.disabled = true;
+            earnPointsBtn.textContent = 'Procesando...';
+
+            // Invoke the Supabase Edge Function to securely award points.
+            // The user's identity is automatically passed via the auth token.
+            supabaseClient.functions.invoke('reward-user-for-ad', {})
+                .then(response => {
+                    if (response.error) {
+                        // Re-throw the error to be caught by the catch block
+                        throw new Error(response.error.message);
+                    }
+                    console.log('Reward function response:', response.data);
+                    alert('¡Has ganado 5 puntos!');
+
+                    // Reload the page to update the user's point display in the header.
+                    // This is a simple way to reflect the change without complex state management.
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error rewarding user:', error);
+                    alert(`Hubo un problema al otorgar tus puntos: ${error.message}`);
+                    // Re-enable the button if the reward failed
+                    earnPointsBtn.disabled = false;
+                    earnPointsBtn.textContent = 'Ver Anuncio para Ganar Puntos';
+                });
+        }
+    }
+
+    async function initializeAdButton() {
         const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) { alert('You must be logged in to earn points.'); return; }
-        const { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
-        if (fetchError) { alert('Error fetching your profile.'); return; }
-        const newPoints = profile.points + 5;
-        const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
-        if (updateError) {
-            alert('Error adding points.');
+        if (!user) {
+            earnPointsBtn.style.display = 'none';
+            return;
+        }
+
+        const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('ads_enabled')
+            .eq('id', user.id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching user profile for ad preference:', error);
+            earnPointsBtn.style.display = 'none';
+            return;
+        }
+
+        if (profile && profile.ads_enabled) {
+            earnPointsBtn.style.display = 'inline-block';
+            earnPointsBtn.textContent = 'Ver Anuncio para Ganar Puntos';
+
+            earnPointsBtn.addEventListener('click', () => {
+                const options = {
+                    zoneId: APPLIXIR_CONFIG.zoneId,
+                    devId: APPLIXIR_CONFIG.devId,
+                    gameId: APPLIXIR_CONFIG.gameId,
+                    adStatusCb: adStatusCallback,
+                    fallback: 1,
+                    verbosity: 0
+                };
+                invokeApplixirVideoUnit(options);
+            });
         } else {
-            await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: 5, description: 'Watched a test ad' });
-            alert('You earned 5 points!');
-            // This requires the global updateUserUI function, which is in main.js
-            // We need to ensure main.js is loaded before this script.
-            if(window.updateUserUI) window.updateUserUI(user);
+            earnPointsBtn.style.display = 'none';
+        }
+    }
+
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+            initializeAdButton();
+        } else if (event === 'SIGNED_OUT') {
+            earnPointsBtn.style.display = 'none';
         }
     });
-
-    // Initial Load
-    loadWishlist();
-    loadPurchasedAssets();
 });

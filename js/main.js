@@ -1,11 +1,3 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Scripts para la Creative Engine Asset Store
-
-    // Advertencia para el desarrollador sobre la configuración de PayPal
-    if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
-    console.warn("ADVERTENCIA: El SDK de PayPal está usando un Client ID de prueba. Reemplaza 'YOUR_SANDBOX_CLIENT_ID' en product.html para que los pagos funcionen.");
-}
-
 // Initialize the Supabase client
 const { createClient } = supabase;
 const supabaseUrl = 'https://tladrluezsmmhjbhupgb.supabase.co';
@@ -17,6 +9,14 @@ if (supabaseUrl === 'TU_SUPABASE_URL' || supabaseKey === 'TU_SUPABASE_KEY') {
 }
 
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Scripts para la Creative Engine Asset Store
+
+    // Advertencia para el desarrollador sobre la configuración de PayPal
+    if (document.querySelector('script[src*="YOUR_SANDBOX_CLIENT_ID"]')) {
+    console.warn("ADVERTENCIA: El SDK de PayPal está usando un Client ID de prueba. Reemplaza 'YOUR_SANDBOX_CLIENT_ID' en product.html para que los pagos funcionen.");
+}
 
 // The defer attribute on the script tag ensures this runs after the DOM is parsed.
 console.log("Creative Engine Asset Store script loaded.");
@@ -1216,36 +1216,6 @@ if (window.location.pathname.includes('admin.html')) {
     }
     document.body.addEventListener('click', handleBuyWithPoints);
 
-    // Lógica para simular ganar puntos
-    const earnPointsBtn = document.getElementById('earn-points-btn');
-    if(earnPointsBtn) {
-        earnPointsBtn.addEventListener('click', async () => {
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) {
-                alert('Debes iniciar sesión para ganar puntos.');
-                return;
-            }
-
-            // En una DB real, esto se haría con una RPC para ser una operación atómica
-            // Por ahora, leemos y luego escribimos.
-            const { data: profile, error: fetchError } = await supabaseClient.from('profiles').select('points').eq('id', user.id).single();
-            if(fetchError) {
-                alert('Error al obtener tu perfil.');
-                return;
-            }
-
-            const newPoints = profile.points + 5;
-            const { error: updateError } = await supabaseClient.from('profiles').update({ points: newPoints }).eq('id', user.id);
-
-            if(updateError) {
-                alert('Error al añadir puntos.');
-            } else {
-                await supabaseClient.from('points_transactions').insert({ user_id: user.id, amount: 5, description: 'Vio un anuncio de prueba' });
-                alert('¡Has ganado 5 puntos!');
-                updateUserUI(user); // Actualizar la UI para mostrar el nuevo saldo
-            }
-        });
-    }
 
     // --- Lógica de la Lista de Deseos ---
     async function handleWishlistClick(e) {
