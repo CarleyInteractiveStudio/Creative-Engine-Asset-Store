@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Assets - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html?category=code-scripts">Code Scripts</a></li>
+                <li><a href="category.html?category=2d-models-animation">2D Models & Animation</a></li>
+                <li><a href="category.html?category=scenes">Scenes</a></li>
+                <li><a href="category.html?category=sounds">Sounds</a></li>
+                <li><a href="category.html?category=ui-assets">UI Assets</a></li>
+                <li><a href="category.html?category=effects">Effects</a></li>
+                <li><a href="category.html?category=textures">Textures</a></li>
+                <li><a href="category.html?category=single-use-projects">Single-Use Projects</a></li>
+                <li><a href="category.html?category=completed-projects">Completed Projects</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-header-actions">
+            <h1>Mis Assets</h1>
+            <button id="earn-points-btn" class="btn btn-secondary">Ver Anuncio de Prueba (+5 Puntos)</button>
+        </div>
+        <div class="tabs">
+            <button class="tab-link active" data-tab="compras">Mis Compras</button>
+            <button class="tab-link" data-tab="deseos">Lista de Deseos</button>
+            <button class="tab-link" data-tab="carrito">Carrito</button>
+        </div>
+
+        <div id="compras" class="tab-content active">
+            <h2>Mis Compras</h2>
+            <div id="purchased-assets-list">
+                <!-- Assets comprados se cargarán aquí -->
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <div id="deseos" class="tab-content">
+            <h2>Lista de Deseos</h2>
+            <div id="wishlist-assets-list">
+                <!-- Assets en lista de deseos se cargarán aquí -->
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <div id="carrito" class="tab-content">
+            <h2>Carrito</h2>
+            <div id="cart-assets-list">
+                <!-- Assets en el carrito se cargarán aquí -->
+                <p>Tu carrito está vacío.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js" defer></script>
+</body>
+</html>

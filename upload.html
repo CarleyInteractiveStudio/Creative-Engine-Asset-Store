@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Producto - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html?category=code-scripts">Code Scripts</a></li>
+                <li><a href="category.html?category=2d-models-animation">2D Models & Animation</a></li>
+                <li><a href="category.html?category=scenes">Scenes</a></li>
+                <li><a href="category.html?category=sounds">Sounds</a></li>
+                <li><a href="category.html?category=ui-assets">UI Assets</a></li>
+                <li><a href="category.html?category=effects">Effects</a></li>
+                <li><a href="category.html?category=textures">Textures</a></li>
+                <li><a href="category.html?category=single-use-projects">Single-Use Projects</a></li>
+                <li><a href="category.html?category=completed-projects">Completed Projects</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <!-- Esto será reemplazado por JS -->
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Subir Nuevo Asset</h1>
+        <form id="upload-form" class="upload-form-layout">
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="product-name">Nombre del Producto</label>
+                    <input type="text" id="product-name" name="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-description">Descripción</label>
+                    <textarea id="product-description" name="product-description" rows="6" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="youtube-link">Enlace de YouTube (Opcional)</label>
+                    <input type="url" id="youtube-link" name="youtube-link" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="price">Precio (USD)</label>
+                    <input type="number" id="price" name="price" min="0" step="0.01" required>
+                    <span id="price-clarification" class="form-clarification"></span>
+                </div>
+                <div class="form-group">
+                    <label for="category">Categoría</label>
+                    <select id="category" name="category" required>
+                        <option value="">Seleccione una categoría...</option>
+                        <option value="c7029fae-41c8-42ec-94c4-1161824e4bd6">Code Scripts</option>
+                        <option value="0866efc0-2deb-4acd-a15a-a22317d66533">2D Models & Animation</option>
+                        <option value="96ed3b41-013b-4bfb-9ee8-8ffa2de29918">Scenes</option>
+                        <option value="a27727cf-94e4-4b8b-bce3-b7049c4c6816">Sounds</option>
+                        <option value="84ff00cb-c315-4bf9-b059-4c4a5ee3b511">UI Assets</option>
+                        <option value="88196857-fa7c-4a9f-b509-6fba95d9e2b9">Effects</option>
+                        <option value="7de3424c-b8dd-4346-82c1-12fd6a5042dd">Textures</option>
+                        <option value="412d93ce-4637-47c7-a217-8c4ce307f8ed">Single-Use Projects</option>
+                        <option value="6957cc46-5704-4a4a-ab93-ce35cd8ba053">Completed Projects</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="product-file">Archivo Principal del Producto (.zip, .rar, .cep)</label>
+                    <input type="file" id="product-file" name="product-file" accept=".zip,.rar,.cep" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-images">Imágenes de Vista Previa (hasta 3)</label>
+                    <input type="file" id="product-images" name="product-images" accept="image/png, image/jpeg" multiple>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large">Enviar para Revisión</button>
+            </div>
+        </form>
+    </main>
+
+    <div id="upload-overlay" class="upload-overlay">
+        <div>
+            <div class="spinner"></div>
+            <p id="upload-message"></p>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js" defer></script>
+</body>
+</html>

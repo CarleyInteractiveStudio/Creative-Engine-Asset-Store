@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Producto - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=AVVdd3tZvuJhi1UZpIMGvHBKg-zHb8R3HN7Yl2VKj8GDoO3_XwH1ZHQkUuxu8S_kvsmhTOJ36U4BNxZF&currency=USD"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html?category=code-scripts">Code Scripts</a></li>
+                <li><a href="category.html?category=2d-models-animation">2D Models & Animation</a></li>
+                <li><a href="category.html?category=scenes">Scenes</a></li>
+                <li><a href="category.html?category=sounds">Sounds</a></li>
+                <li><a href="category.html?category=ui-assets">UI Assets</a></li>
+                <li><a href="category.html?category=effects">Effects</a></li>
+                <li><a href="category.html?category=textures">Textures</a></li>
+                <li><a href="category.html?category=single-use-projects">Single-Use Projects</a></li>
+                <li><a href="category.html?category=completed-projects">Completed Projects</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="product-details-layout">
+            <!-- Product details will be loaded here by js/main.js -->
+            <div class="product-media">
+                <div class="main-media">
+                    <!-- Main image or video will appear here -->
+                </div>
+                <div class="thumbnail-gallery">
+                    <!-- Thumbnails will appear here -->
+                </div>
+            </div>
+            <div class="product-info-panel">
+                <h1 class="product-title">Cargando...</h1>
+                <div class="product-author">por <a href="#">...</a></div>
+                <div class="product-price">...</div>
+                <div class="product-actions">
+                    <div id="paypal-button-container"></div>
+                    <button class="btn btn-secondary btn-large btn-buy-points" style="display: none;">Comprar</button>
+                    <button class="btn btn-primary btn-large btn-get-free" style="display: none;">Obtener Gratis</button>
+                    <button class="wishlist-btn-large" style="display: none;">❤️</button>
+                </div>
+                <div class="product-description">
+                    <h2>Descripción</h2>
+                </div>
+                <div class="product-license">
+                    <h2>Licencia</h2>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js" defer></script>
+</body>
+</html>

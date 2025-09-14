@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html?category=code-scripts">Code Scripts</a></li>
+                <li><a href="category.html?category=2d-models-animation">2D Models & Animation</a></li>
+                <li><a href="category.html?category=scenes">Scenes</a></li>
+                <li><a href="category.html?category=sounds">Sounds</a></li>
+                <li><a href="category.html?category=ui-assets">UI Assets</a></li>
+                <li><a href="category.html?category=effects">Effects</a></li>
+                <li><a href="category.html?category=textures">Textures</a></li>
+                <li><a href="category.html?category=single-use-projects">Single-Use Projects</a></li>
+                <li><a href="category.html?category=completed-projects">Completed Projects</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Panel de Administración</h1>
+
+        <div class="admin-stats">
+            <div class="stat-card">
+                <h4>Productos Totales</h4>
+                <p id="stats-total-products">...</p>
+            </div>
+            <div class="stat-card">
+                <h4>Ingresos Totales (Simulado)</h4>
+                <p id="stats-total-revenue">...</p>
+            </div>
+            <div class="stat-card">
+                <h4>Ventas del Mes (Simulado)</h4>
+                <p id="stats-monthly-sales">...</p>
+            </div>
+        </div>
+
+        <h2>Productos Pendientes de Revisión</h2>
+        <div id="pending-products-list">
+            <!-- La lista de productos pendientes se cargará aquí -->
+            <p>Cargando productos pendientes...</p>
+        </div>
+
+        <hr class="section-divider">
+
+        <h2>Gestionar Productos Aprobados</h2>
+        <div id="approved-products-list">
+            <!-- La lista de productos aprobados se cargará aquí -->
+            <p>Cargando productos aprobados...</p>
+        </div>
+    </main>
+
+    <!-- Modal para Razón de Rechazo -->
+    <div id="rejection-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3>Razón del Rechazo</h3>
+            <textarea id="rejection-reason-text" rows="4"></textarea>
+            <button id="submit-rejection-btn" class="btn btn-primary">Enviar Rechazo</button>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js" defer></script>
+</body>
+</html>

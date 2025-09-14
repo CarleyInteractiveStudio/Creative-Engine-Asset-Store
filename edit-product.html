@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Producto - Creative Engine Asset Store</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="index.html"><img src="assets/images/logo.png" alt="Creative Engine Asset Store Logo"></a>
+            <span>Creative Engine Asset Store</span>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="category.html?category=code-scripts">Code Scripts</a></li>
+                <li><a href="category.html?category=2d-models-animation">2D Models & Animation</a></li>
+                <li><a href="category.html?category=scenes">Scenes</a></li>
+                <li><a href="category.html?category=sounds">Sounds</a></li>
+                <li><a href="category.html?category=ui-assets">UI Assets</a></li>
+                <li><a href="category.html?category=effects">Effects</a></li>
+                <li><a href="category.html?category=textures">Textures</a></li>
+                <li><a href="category.html?category=single-use-projects">Single-Use Projects</a></li>
+                <li><a href="category.html?category=completed-projects">Completed Projects</a></li>
+            </ul>
+        </nav>
+        <div class="user-actions">
+            <div class="config-menu">
+                <button id="config-btn" class="config-btn">⚙️</button>
+                <div id="config-dropdown" class="config-dropdown">
+                    <!-- Links will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Editar Asset</h1>
+        <form id="edit-form" class="upload-form-layout">
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="product-name">Nombre del Producto</label>
+                    <input type="text" id="product-name" name="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-description">Descripción</label>
+                    <textarea id="product-description" name="product-description" rows="6" required></textarea>
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="price">Precio (USD)</label>
+                    <input type="number" id="price" name="price" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">Categoría</label>
+                    <select id="category" name="category" required>
+                        <option value="">Seleccione una categoría...</option>
+                        <option value="1">Scripts</option>
+                        <option value="2">Modelos 2D</option>
+                        <option value="3">Escenas</option>
+                        <option value="4">Sonidos</option>
+                        <option value="5">UI</option>
+                        <option value="6">Efectos</option>
+                        <option value="7">Texturas</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large">Guardar Cambios</button>
+            </div>
+        </form>
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 Creative Engine Asset Store. Todos los derechos reservados.</p>
+    </footer>
+
+    <script src="js/main.js" defer></script>
+</body>
+</html>
