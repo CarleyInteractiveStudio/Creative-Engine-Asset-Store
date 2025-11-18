@@ -258,10 +258,16 @@ if (window.location.pathname.includes('admin.html')) {
                 const mainFilePath = `${user.id}/${timestamp}-${sanitizedMainFileName}`;
                 const { error: mainFileError } = await supabaseClient.storage
                     .from('product_files')
-                    .upload(mainFilePath, mainFile);
+                    .upload(mainFilePath, mainFile, {
+                        // La privacidad del archivo es controlada por la política del bucket en Supabase,
+                        // no por estas opciones. Estas opciones son para el control de caché.
+                        cacheControl: '3600',
+                        upsert: false
+                    });
                 if (mainFileError) throw mainFileError;
 
-                const { data: { publicUrl: mainFileUrl } } = supabaseClient.storage.from('product_files').getPublicUrl(mainFilePath);
+                // YA NO generamos una URL pública. Guardamos la RUTA.
+                const mainFileUrl = mainFilePath;
 
                 // 2. Insertar en la tabla 'products'
                 overlayMessage.textContent = 'Guardando detalles del producto...';
@@ -274,7 +280,7 @@ if (window.location.pathname.includes('admin.html')) {
                         category_id: categoryId,
                         youtube_url: youtubeUrl,
                         seller_id: user.id,
-                        main_file_url: mainFileUrl,
+                        main_file_url: mainFileUrl, // Guardamos la ruta, no la URL pública
                         status: 'pending'
                     })
                     .select()
@@ -1109,13 +1115,17 @@ if (window.location.pathname.includes('admin.html')) {
                 }
 
                 return `
-                    <a href="product.html?id=${product.id}" class="asset-card">
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                    <div class="asset-card my-asset-card">
+                        <a href="product.html?id=${product.id}">
+                            <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                        </a>
                         <div class="asset-info">
-                            <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">Obtenido</p>
+                            <a href="product.html?id=${product.id}" style="text-decoration: none; color: inherit;">
+                                <h3 class="asset-title">${product.name}</h3>
+                            </a>
+                            <button class="btn btn-primary download-btn" data-product-id="${product.id}">Descargar</button>
                         </div>
-                    </a>
+                    </div>
                 `;
             });
 
@@ -1160,22 +1170,81 @@ if (window.location.pathname.includes('admin.html')) {
         }
 
         const productId = button.dataset.productId;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Obteniendo...';
 
-        const { error } = await supabaseClient
-            .from('user_owned_assets')
-            .insert({ user_id: user.id, product_id: productId, purchase_price: 0 });
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('get-free-asset', {
+                body: { productId },
+            });
 
-        if (error) {
-            console.error('Error al obtener el asset gratuito:', error);
-            alert('Hubo un error al obtener el asset.');
-        } else {
-            alert('¡Asset añadido a tu colección!');
+            if (error) {
+                // Esto maneja errores de red o de invocación de la función
+                throw new Error(`Error de la función: ${error.message}`);
+            }
+
+            if (data.error) {
+                // Esto maneja errores lanzados dentro de la función (ej. el producto no es gratis)
+                throw new Error(data.error);
+            }
+
+            alert(data.message || '¡Asset añadido a tu colección!');
             button.textContent = 'En tu colección';
-            button.disabled = true;
+            // El botón permanece deshabilitado
+
+        } catch (err) {
+            console.error('Error al obtener el asset gratuito:', err);
+            alert(`No se pudo obtener el asset: ${err.message}`);
+            button.disabled = false;
+            button.textContent = originalText;
         }
     }
 
     document.body.addEventListener('click', handleGetFreeClick);
+
+    async function handleDownloadAsset(e) {
+        const button = e.target.closest('.download-btn');
+        if (!button) return;
+
+        const productId = button.dataset.productId;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Generando...';
+
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('create-download-link', {
+                body: { productId },
+            });
+
+            if (error) {
+                throw new Error(`Error de la función: ${error.message}`);
+            }
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            if (!data.signedUrl) {
+                throw new Error("No se recibió un enlace de descarga válido.");
+            }
+
+            const link = document.createElement('a');
+            link.href = data.signedUrl;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+        } catch (err) {
+            console.error('Error al descargar:', err);
+            alert(`No se pudo generar el enlace de descarga: ${err.message}`);
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+    document.body.addEventListener('click', handleDownloadAsset);
 
     async function handleBuyWithPoints(e) {
         const button = e.target.closest('.btn-buy-points');
