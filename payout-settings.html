@@ -27,11 +27,17 @@
         <h1>Configuración de Pagos</h1>
         <p>Introduce tu dirección de correo electrónico de PayPal para recibir tus ganancias.</p>
 
-        <div class="login-container">
+        <div class="settings-form-container">
             <form id="payout-form">
                 <div class="form-group">
                     <label for="paypal-email">Correo Electrónico de PayPal</label>
                     <input type="email" id="paypal-email" name="paypal-email" required>
+                </div>
+                <hr class="section-divider">
+                <div class="form-group">
+                    <label for="current-password">Confirmar Contraseña Actual</label>
+                    <input type="password" id="current-password" name="current-password" required autocomplete="current-password">
+                    <p class="form-clarification">Por seguridad, debes introducir tu contraseña para guardar los cambios.</p>
                 </div>
                 <button type="submit" class="btn btn-primary btn-large">Guardar</button>
             </form>

@@ -668,14 +668,23 @@ if (window.location.pathname.includes('admin.html')) {
     const categoryGrid = document.querySelector('.category-browser .category-grid');
     if (categoryGrid) {
         async function loadCategories() {
+            console.log("Iniciando la carga de categorías...");
             const { data: categories, error } = await supabaseClient
                 .from('categories')
                 .select('name, slug')
                 .order('name', { ascending: true });
 
             if (error) {
-                console.error('Error cargando categorías:', error);
+                console.error('Error al cargar categorías:', error);
                 categoryGrid.innerHTML = '<p class="error">No se pudieron cargar las categorías.</p>';
+                return;
+            }
+
+            console.log("Categorías recibidas:", categories);
+
+            if (!categories || categories.length === 0) {
+                console.warn("No se encontraron categorías en la base de datos.");
+                categoryGrid.innerHTML = '<p>No hay categorías para mostrar.</p>';
                 return;
             }
 
@@ -686,6 +695,7 @@ if (window.location.pathname.includes('admin.html')) {
             `).join('');
 
             categoryGrid.innerHTML = categoryHTML;
+            console.log("Categorías cargadas en el DOM.");
         }
         loadCategories();
     }
@@ -1036,20 +1046,36 @@ if (window.location.pathname.includes('admin.html')) {
 
         payoutForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (!user) return;
+            const newEmail = document.getElementById('paypal-email').value;
+            const password = document.getElementById('current-password').value;
+            const submitButton = payoutForm.querySelector('button[type="submit"]');
 
-            const newEmail = emailInput.value;
-            const { error } = await supabaseClient
-                .from('profiles')
-                .update({ paypal_email: newEmail })
-                .eq('id', user.id);
+            if (!password) {
+                alert('Por favor, introduce tu contraseña para confirmar los cambios.');
+                return;
+            }
 
-            if (error) {
-                alert('Error al guardar la configuración.');
-                console.error(error);
-            } else {
-                alert('¡Configuración de pago guardada exitosamente!');
+            const originalButtonText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Guardando...';
+
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('update-paypal-email', {
+                    body: { newEmail, password },
+                });
+
+                if (error) throw new Error(`Error de la función: ${error.message}`);
+                if (data.error) throw new Error(data.error);
+
+                alert(data.message);
+                document.getElementById('current-password').value = ''; // Limpiar campo de contraseña
+
+            } catch (err) {
+                alert(`Error al guardar la configuración: ${err.message}`);
+                console.error(err);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
         });
 
