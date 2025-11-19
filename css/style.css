@@ -293,8 +293,10 @@ a {
 
 /* Category Browser */
 .category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    display: flex; /* Cambiado de grid a flex */
+    overflow-x: auto; /* Permite el scroll horizontal */
+    white-space: nowrap; /* Evita que los elementos salten a la siguiente línea */
+    padding-bottom: 20px; /* Espacio para que el scrollbar no se pegue al contenido */
     gap: 15px;
 }
 
@@ -308,6 +310,7 @@ a {
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s, color 0.3s;
+    flex: 0 0 180px; /* Añadido: No crece, no se encoge, base de 180px */
 }
 
 .category-card:hover {

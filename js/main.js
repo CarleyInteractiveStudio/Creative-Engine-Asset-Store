@@ -656,12 +656,48 @@ if (window.location.pathname.includes('admin.html')) {
     const categoryAssetGrid = document.querySelector('.category-content .asset-grid');
     if (categoryAssetGrid) {
         async function loadCategoryProducts() {
-            // NOTA: En una app real, aquí se obtendría la categoría de la URL
-            // y se filtraría por ella. Por ahora, cargamos todos los aprobados.
-            const { data: products, error } = await supabaseClient
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryName = urlParams.get('category');
+
+            // Actualizar el título de la página
+            const categoryTitleElement = document.querySelector('.category-title');
+            if (categoryTitleElement) {
+                if (categoryName) {
+                    // Formatear el nombre para mostrar (e.g., 'code-scripts' -> 'Code Scripts')
+                    const formattedName = categoryName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    categoryTitleElement.textContent = formattedName;
+                } else {
+                    categoryTitleElement.textContent = 'Todos los Productos';
+                }
+            }
+
+            let query = supabaseClient
                 .from('products')
                 .select('*')
                 .eq('status', 'approved');
+
+            // Si hay un nombre de categoría en la URL, lo usamos para filtrar.
+            if (categoryName) {
+                // Asumimos que la tabla 'categories' tiene una columna 'slug' que coincide
+                // con el parámetro de la URL (e.g., 'code-scripts').
+                // Primero, obtenemos el ID de la categoría a partir de su slug.
+                const { data: category, error: categoryError } = await supabaseClient
+                    .from('categories')
+                    .select('id')
+                    .eq('slug', categoryName)
+                    .single();
+
+                if (categoryError || !category) {
+                    console.error('Error: No se encontró la categoría:', categoryName);
+                    categoryAssetGrid.innerHTML = '<p>La categoría especificada no existe.</p>';
+                    return;
+                }
+
+                // Luego, filtramos los productos por ese ID de categoría.
+                query = query.eq('category_id', category.id);
+            }
+
+            const { data: products, error } = await query;
 
             if (error) {
                 console.error('Error cargando productos de categoría:', error);
