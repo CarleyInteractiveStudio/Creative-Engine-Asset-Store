@@ -551,27 +551,39 @@ if (window.location.pathname.includes('admin.html')) {
         closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
 
         async function handleApproval(productId) {
-            const { error } = await supabaseClient.from('products').update({ status: 'approved' }).eq('id', productId);
-            if (error) {
-                alert('Error al aprobar el producto.');
-                console.error(error);
-            } else {
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('admin-approve-product', {
+                    body: { productId },
+                });
+
+                if (error) throw error;
+                if (data.error) throw new Error(data.error);
+
+                alert(data.message);
                 document.getElementById(`product-${productId}`).remove();
-                // Aquí llamaríamos a la Edge Function de notificación
-                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'approved' } });
+
+            } catch (err) {
+                alert(`Error al aprobar el producto: ${err.message}`);
+                console.error(err);
             }
         }
 
         async function handleRejection(productId, reason) {
-            const { error } = await supabaseClient.from('products').update({ status: 'rejected', rejection_reason: reason }).eq('id', productId);
-             if (error) {
-                alert('Error al rechazar el producto.');
-                console.error(error);
-            } else {
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('admin-reject-product', {
+                    body: { productId, reason },
+                });
+
+                if (error) throw error;
+                if (data.error) throw new Error(data.error);
+
+                alert(data.message);
                 modal.style.display = 'none';
                 document.getElementById(`product-${productId}`).remove();
-                // Aquí llamaríamos a la Edge Function de notificación
-                supabaseClient.functions.invoke('send-product-status-email', { body: { productId: productId, status: 'rejected', reason: reason } });
+
+            } catch (err) {
+                alert(`Error al rechazar el producto: ${err.message}`);
+                console.error(err);
             }
         }
 
@@ -841,44 +853,19 @@ if (window.location.pathname.includes('admin.html')) {
             } else if (target.classList.contains('delete-btn')) {
                 if (confirm('¿Estás seguro de que quieres borrar este producto permanentemente? Esta acción no se puede deshacer.')) {
                     try {
-                        // --- Client-Side Deletion of Storage and DB records ---
+                        const { data, error } = await supabaseClient.functions.invoke('admin-delete-product', {
+                            body: { productId: id },
+                        });
 
-                        // 1. Get all file paths associated with the product
-                        const { data: images, error: imageError } = await supabaseClient
-                            .from('product_images').select('image_url').eq('product_id', id);
+                        if (error) throw error;
+                        if (data.error) throw new Error(data.error);
 
-                        const { data: product, error: productError } = await supabaseClient
-                            .from('products').select('main_file_url').eq('id', id).single();
-
-                        if (imageError || productError) throw imageError || productError;
-
-                        // 2. Delete files from Storage
-                        if (images && images.length > 0) {
-                            const imagePaths = images.map(img => img.image_url.split('/product_images/')[1]);
-                            const { error: storageImageError } = await supabaseClient.storage.from('product_images').remove(imagePaths);
-                            if (storageImageError) console.error('Error deleting images from storage:', storageImageError);
-                        }
-                        if (product && product.main_file_url) {
-                            const mainFilePath = product.main_file_url.split('/product_files/')[1];
-                            const { error: storageMainFileError } = await supabaseClient.storage.from('product_files').remove([mainFilePath]);
-                            if (storageMainFileError) console.error('Error deleting main file from storage:', storageMainFileError);
-                        }
-
-                        // 3. Delete database records
-                        await supabaseClient.from('product_images').delete().eq('product_id', id);
-                        await supabaseClient.from('user_owned_assets').delete().eq('product_id', id);
-                        await supabaseClient.from('wishlist_items').delete().eq('product_id', id);
-
-                        const { error: productDeleteError } = await supabaseClient.from('products').delete().eq('id', id);
-                        if (productDeleteError) throw productDeleteError;
-
-                        // 4. Update UI
-                        alert('Producto borrado exitosamente.');
+                        alert(data.message);
                         document.getElementById(`product-approved-${id}`).remove();
 
-                    } catch (error) {
-                        alert('Error al borrar el producto y sus archivos.');
-                        console.error('Error during full deletion process:', error);
+                    } catch (err) {
+                        alert(`Error al borrar el producto: ${err.message}`);
+                        console.error('Error during secure deletion process:', err);
                     }
                 }
             }
