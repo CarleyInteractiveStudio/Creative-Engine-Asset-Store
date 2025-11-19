@@ -652,6 +652,32 @@ if (window.location.pathname.includes('admin.html')) {
         loadFeaturedProducts();
     }
 
+    // Lógica para cargar categorías dinámicamente en la página de inicio
+    const categoryGrid = document.querySelector('.category-browser .category-grid');
+    if (categoryGrid) {
+        async function loadCategories() {
+            const { data: categories, error } = await supabaseClient
+                .from('categories')
+                .select('name, slug')
+                .order('name', { ascending: true });
+
+            if (error) {
+                console.error('Error cargando categorías:', error);
+                categoryGrid.innerHTML = '<p class="error">No se pudieron cargar las categorías.</p>';
+                return;
+            }
+
+            const categoryHTML = categories.map(category => `
+                <a href="category.html?category=${category.slug}" class="category-card">
+                    ${category.name}
+                </a>
+            `).join('');
+
+            categoryGrid.innerHTML = categoryHTML;
+        }
+        loadCategories();
+    }
+
     // Lógica para cargar productos en la página de categoría
     const categoryAssetGrid = document.querySelector('.category-content .asset-grid');
     if (categoryAssetGrid) {
