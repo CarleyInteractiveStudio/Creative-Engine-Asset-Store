@@ -26,15 +26,25 @@
 
     <main class="container">
         <div class="product-details-layout">
-            <!-- Product details will be loaded here by js/main.js -->
-            <div class="product-media">
-                <div class="main-media">
-                    <!-- Main image or video will appear here -->
+            <!-- Columna Izquierda: Media y Comentarios -->
+            <div class="product-main-column">
+                <div class="product-media">
+                    <div class="main-media">
+                        <!-- Main image or video will appear here -->
+                    </div>
+                    <div class="thumbnail-gallery">
+                        <!-- Thumbnails will appear here -->
+                    </div>
                 </div>
-                <div class="thumbnail-gallery">
-                    <!-- Thumbnails will appear here -->
+                <div id="comments-display-section" class="comments-display">
+                    <h2>Comentarios de la Comunidad</h2>
+                    <div id="comments-list">
+                        <!-- Los comentarios se cargarán aquí dinámicamente -->
+                    </div>
                 </div>
             </div>
+
+            <!-- Columna Derecha: Información y Formulario de Reseña -->
             <div class="product-info-panel">
                 <h1 class="product-title">Cargando...</h1>
                 <div class="product-author">por <a href="#">...</a></div>
@@ -68,14 +78,6 @@
                         <button type="submit" class="btn btn-primary">Enviar Reseña</button>
                     </form>
                 </div>
-            </div>
-        </div>
-
-        <!-- Nueva Sección para Mostrar Comentarios -->
-        <div id="comments-display-section" class="comments-display">
-            <h2>Comentarios de la Comunidad</h2>
-            <div id="comments-list">
-                <!-- Los comentarios se cargarán aquí dinámicamente -->
             </div>
         </div>
     </main>
