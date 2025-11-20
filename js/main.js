@@ -1896,23 +1896,3 @@ document.body.addEventListener('click', async (e) => {
         button.textContent = originalText;
     }
 });
-});
-
-
-/* --- Nuevos Estilos para el Layout de la Página de Producto --- */
-.product-details-layout {
-    display: flex;
-    gap: 30px; /* Espacio entre la columna de media/comentarios y la de info */
-    align-items: flex-start; /* Alinear las columnas en la parte superior */
-}
-
-.product-main-column {
-    flex: 2; /* La columna izquierda ocupará 2/3 del espacio */
-    min-width: 0; /* Necesario para que flexbox maneje el tamaño correctamente */
-}
-
-.product-info-panel {
-    flex: 1; /* La columna derecha ocupará 1/3 del espacio */
-    position: sticky; /* Hacer que la columna de info se quede fija al hacer scroll */
-    top: 20px; /* Espacio desde la parte superior */
-}
