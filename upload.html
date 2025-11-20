@@ -56,6 +56,23 @@
                         <option value="6957cc46-5704-4a4a-ab93-ce35cd8ba053">Completed Projects</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="license-type">Tipo de Licencia</label>
+                    <select id="license-type" name="license-type" required>
+                        <option value="standard_paid">De Pago (Uso Comercial Ilimitado)</option>
+                        <option value="exclusive">Exclusiva (Venta Única)</option>
+                        <option value="free_educational">Gratuita (Uso Educativo)</option>
+                        <option value="free_commercial">Gratuita (Uso Comercial con Atribución)</option>
+                        <option value="custom">Personalizada</option>
+                    </select>
+                </div>
+                <div id="custom-license-fields" class="form-group" style="display: none;">
+                    <label for="custom-seller-rights">Derechos del Vendedor (Licencia Personalizada)</label>
+                    <textarea id="custom-seller-rights" name="custom-seller-rights" placeholder="Ej: El comprador no puede revender este asset." rows="3"></textarea>
+
+                    <label for="custom-buyer-rights">Derechos del Comprador (Licencia Personalizada)</label>
+                    <textarea id="custom-buyer-rights" name="custom-buyer-rights" placeholder="Ej: El comprador puede usar este asset en un proyecto comercial." rows="3"></textarea>
+                </div>
                  <div class="form-group">
                     <label for="product-file">Archivo Principal del Producto (.zip, .rar, .cep)</label>
                     <input type="file" id="product-file" name="product-file" accept=".zip,.rar,.cep" required>

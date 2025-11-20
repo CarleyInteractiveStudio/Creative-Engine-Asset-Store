@@ -182,6 +182,19 @@ if (window.location.pathname.includes('admin.html')) {
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
 
+        // Lógica para mostrar/ocultar campos de licencia personalizada
+        const licenseTypeSelect = document.getElementById('license-type');
+        const customLicenseFields = document.getElementById('custom-license-fields');
+        if (licenseTypeSelect && customLicenseFields) {
+            licenseTypeSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customLicenseFields.style.display = 'block';
+                } else {
+                    customLicenseFields.style.display = 'none';
+                }
+            });
+        }
+
         const imagesInput = document.getElementById('product-images');
         imagesInput.addEventListener('change', (e) => {
             if (e.target.files.length > 3) {
@@ -218,6 +231,9 @@ if (window.location.pathname.includes('admin.html')) {
             const price = e.target.price.value;
             const categoryId = e.target.category.value;
             const youtubeUrl = e.target['youtube-link'].value;
+            const licenseType = e.target['license-type'].value;
+            const customSellerRights = e.target['custom-seller-rights'].value;
+            const customBuyerRights = e.target['custom-buyer-rights'].value;
             const mainFile = e.target['product-file'].files[0];
             const images = e.target['product-images'].files;
 
@@ -251,25 +267,46 @@ if (window.location.pathname.includes('admin.html')) {
                 submitButton.disabled = true;
                 showOverlay('Subiendo producto...');
 
-                // 1. Subir archivo principal
+                // --- Generación del contenido de la licencia ---
+                let licenseContent = `Licencia para: ${productName}\n`;
+                licenseContent += `Tipo de Licencia: ${licenseType}\n\n`;
+
+                switch (licenseType) {
+                    case 'standard_paid':
+                        licenseContent += "Términos: El comprador puede usar este asset en un número ilimitado de proyectos comerciales. No se requiere atribución al autor original.";
+                        break;
+                    case 'exclusive':
+                        licenseContent += "Términos: Esta es una licencia de venta única. Una vez comprado, este producto se eliminará de la tienda. El comprador adquiere plenos derechos para usar, modificar y distribuir el asset en cualquier tipo de proyecto. El vendedor original renuncia a todos los derechos sobre el asset y se compromete a no revenderlo ni distribuirlo en ningún otro lugar.";
+                        break;
+                    case 'free_educational':
+                        licenseContent += "Términos: Este asset puede ser utilizado libremente en proyectos personales y educativos. No está permitido su uso en proyectos comerciales. No se puede redistribuir el asset sin el permiso explícito del creador original.";
+                        break;
+                    case 'free_commercial':
+                        licenseContent += "Términos: Este asset puede ser utilizado en proyectos comerciales y personales. Se requiere dar crédito/atribución al autor original del producto.";
+                        break;
+                    case 'custom':
+                        licenseContent += `Derechos del Vendedor:\n${customSellerRights}\n\nDerechos del Comprador:\n${customBuyerRights}`;
+                        break;
+                }
+                const licenseFile = new Blob([licenseContent], { type: 'text/plain' });
+                const licenseFilePath = `${user.id}/${Date.now()}-licencia.txt`;
+
+                // 1. Subir archivo de licencia
+                overlayMessage.textContent = 'Subiendo licencia...';
+                const { error: licenseFileError } = await supabaseClient.storage
+                    .from('product_licenses')
+                    .upload(licenseFilePath, licenseFile);
+                if (licenseFileError) throw licenseFileError;
+
+                // 2. Subir archivo principal
                 overlayMessage.textContent = 'Subiendo archivo principal...';
-                const timestamp = Date.now();
-                const sanitizedMainFileName = mainFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-                const mainFilePath = `${user.id}/${timestamp}-${sanitizedMainFileName}`;
+                const mainFilePath = `${user.id}/${Date.now()}-${mainFile.name.replace(/\s+/g, '_')}`;
                 const { error: mainFileError } = await supabaseClient.storage
                     .from('product_files')
-                    .upload(mainFilePath, mainFile, {
-                        // La privacidad del archivo es controlada por la política del bucket en Supabase,
-                        // no por estas opciones. Estas opciones son para el control de caché.
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+                    .upload(mainFilePath, mainFile);
                 if (mainFileError) throw mainFileError;
 
-                // YA NO generamos una URL pública. Guardamos la RUTA.
-                const mainFileUrl = mainFilePath;
-
-                // 2. Insertar en la tabla 'products'
+                // 3. Insertar en la tabla 'products'
                 overlayMessage.textContent = 'Guardando detalles del producto...';
                 const { data: productData, error: productError } = await supabaseClient
                     .from('products')
@@ -280,7 +317,11 @@ if (window.location.pathname.includes('admin.html')) {
                         category_id: categoryId,
                         youtube_url: youtubeUrl,
                         seller_id: user.id,
-                        main_file_url: mainFileUrl, // Guardamos la ruta, no la URL pública
+                        main_file_url: mainFilePath,
+                        license_file_path: licenseFilePath, // Guardar ruta de la licencia
+                        license_type: licenseType,
+                        custom_license_seller_rights: customSellerRights || null,
+                        custom_license_buyer_rights: customBuyerRights || null,
                         status: 'pending'
                     })
                     .select()
@@ -1216,7 +1257,10 @@ if (window.location.pathname.includes('admin.html')) {
                             <a href="product.html?id=${product.id}" style="text-decoration: none; color: inherit;">
                                 <h3 class="asset-title">${product.name}</h3>
                             </a>
-                            <button class="btn btn-primary download-btn" data-product-id="${product.id}">Descargar</button>
+                            <div class="my-assets-actions">
+                                <button class="btn btn-primary download-btn" data-product-id="${product.id}">Descargar Producto</button>
+                                ${product.license_file_path ? `<button class="btn btn-secondary download-license-btn" data-license-path="${product.license_file_path}">Descargar Licencia</button>` : ''}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1493,8 +1537,10 @@ if (window.location.pathname.includes('product.html')) {
             document.querySelector('.product-author a').textContent = product.profiles.username || 'Desconocido';
             document.querySelector('.product-price').textContent = product.price > 0 ? `\$${product.price.toFixed(2)}` : 'Gratis';
             document.querySelector('.product-description').innerHTML = `<h2>Descripción</h2><p>${product.description.replace(/\n/g, '<br>')}</p>`;
-            document.querySelector('.product-license').innerHTML = `<h2>Licencia</h2><p>${product.license || 'No especificada.'}</p>`;
 
+            // --- Renderizar detalles de la licencia ---
+            const licenseDetailsContainer = document.getElementById('license-details');
+            licenseDetailsContainer.innerHTML = renderLicenseDetails(product);
 
             // Renderizar estrellas de calificación promedio
             const averageRatingEl = document.getElementById('product-average-rating');
@@ -1762,4 +1808,111 @@ document.addEventListener('click', async (e) => {
         alert(`Error: ${error.message}`);
     }
 });
+
+// --- Nueva Función para Renderizar Detalles de la Licencia ---
+function renderLicenseDetails(product) {
+    let licenseHTML = '';
+    const licenseType = product.license_type;
+
+    switch (licenseType) {
+        case 'standard_paid':
+            licenseHTML = `
+                <h4>De Pago (Uso Comercial Ilimitado)</h4>
+                <p>Puedes usar este asset en un número ilimitado de proyectos comerciales. No se requiere atribución al autor original.</p>
+            `;
+            break;
+        case 'exclusive':
+            licenseHTML = `
+                <h4>Exclusiva (Venta Única)</h4>
+                <p>Al comprar este producto, adquieres los derechos exclusivos. Será retirado de la tienda permanentemente. Puedes usarlo, modificarlo y distribuirlo en cualquier proyecto sin restricciones.</p>
+            `;
+            break;
+        case 'free_educational':
+            licenseHTML = `
+                <h4>Gratuita (Uso Educativo)</h4>
+                <p>Puedes usar este asset libremente en proyectos personales y educativos. No está permitido su uso en proyectos comerciales ni su redistribución sin el permiso explícito del creador.</p>
+            `;
+            break;
+        case 'free_commercial':
+            licenseHTML = `
+                <h4>Gratuita (Uso Comercial con Atribución)</h4>
+                <p>Puedes usar este asset en proyectos comerciales y personales, pero debes dar crédito (atribución) al autor original del producto.</p>
+            `;
+            break;
+        case 'custom':
+            licenseHTML = `
+                <h4>Personalizada</h4>
+                <p>Esta licencia tiene términos especiales definidos por el vendedor.</p>
+                <h5>Derechos del Vendedor:</h5>
+                <p>${product.custom_license_seller_rights || 'No especificados.'}</p>
+                <h5>Derechos del Comprador:</h5>
+                <p>${product.custom_license_buyer_rights || 'No especificados.'}</p>
+            `;
+            break;
+        default:
+            licenseHTML = '<p>Licencia no especificada.</p>';
+            break;
+    }
+    return licenseHTML;
+}
+
+// --- Nueva Lógica para Descargar la Licencia ---
+document.body.addEventListener('click', async (e) => {
+    const button = e.target.closest('.download-license-btn');
+    if (!button) return;
+
+    const licensePath = button.dataset.licensePath;
+    if (!licensePath) {
+        alert('Error: No se encontró la ruta de la licencia.');
+        return;
+    }
+
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Generando...';
+
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('create-license-download-link', {
+            body: { licensePath },
+        });
+
+        if (error) throw new Error(`Error de la función: ${error.message}`);
+        if (data.error) throw new Error(data.error);
+        if (!data.signedUrl) throw new Error("No se recibió un enlace de descarga válido.");
+
+        // Iniciar la descarga
+        const link = document.createElement('a');
+        link.href = data.signedUrl;
+        link.download = 'licencia.txt'; // Nombre del archivo que verá el usuario
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (err) {
+        console.error('Error al descargar la licencia:', err);
+        alert(`No se pudo generar el enlace de descarga: ${err.message}`);
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+    }
 });
+});
+
+
+/* --- Nuevos Estilos para el Layout de la Página de Producto --- */
+.product-details-layout {
+    display: flex;
+    gap: 30px; /* Espacio entre la columna de media/comentarios y la de info */
+    align-items: flex-start; /* Alinear las columnas en la parte superior */
+}
+
+.product-main-column {
+    flex: 2; /* La columna izquierda ocupará 2/3 del espacio */
+    min-width: 0; /* Necesario para que flexbox maneje el tamaño correctamente */
+}
+
+.product-info-panel {
+    flex: 1; /* La columna derecha ocupará 1/3 del espacio */
+    position: sticky; /* Hacer que la columna de info se quede fija al hacer scroll */
+    top: 20px; /* Espacio desde la parte superior */
+}
