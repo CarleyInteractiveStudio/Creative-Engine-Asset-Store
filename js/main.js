@@ -1681,36 +1681,48 @@ async function loadComments(productId, user) {
     commentsList.innerHTML = '<p>Cargando comentarios...</p>';
 
     try {
-        const { data: comments, error } = await supabaseClient
-            .from('comments')
-            .select('*, profiles(username), comment_votes(*)')
+        // 1. Obtener los comentarios desde la nueva vista
+        const { data: comments, error: commentsError } = await supabaseClient
+            .from('comments_with_details')
+            .select('*')
             .eq('product_id', productId)
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (commentsError) throw commentsError;
 
         if (comments.length === 0) {
             commentsList.innerHTML = '<p>Todavía no hay comentarios. ¡Sé el primero!</p>';
             return;
         }
 
-        const commentsHtml = comments.map(comment => {
-            const upvotes = comment.comment_votes.filter(v => v.vote_type === 'upvote').length;
-            const downvotes = comment.comment_votes.filter(v => v.vote_type === 'downvote').length;
-            const supports = comment.comment_votes.filter(v => v.vote_type === 'support').length;
-            let userVote = user ? comment.comment_votes.find(v => v.user_id === user.id)?.vote_type : null;
+        // 2. Si el usuario está logueado, obtener sus votos para marcar los botones correctos
+        let userVotes = new Map();
+        if (user) {
+            const commentIds = comments.map(c => c.id);
+            const { data: votesData, error: votesError } = await supabaseClient
+                .from('comment_votes')
+                .select('comment_id, vote_type')
+                .in('comment_id', commentIds)
+                .eq('user_id', user.id);
 
+            if (votesError) console.warn("No se pudieron cargar los votos del usuario:", votesError);
+            else votesData.forEach(vote => userVotes.set(vote.comment_id, vote.vote_type));
+        }
+
+        // 3. Renderizar el HTML
+        const commentsHtml = comments.map(comment => {
+            const userVote = userVotes.get(comment.id);
             return `
                 <div class="comment-card ${comment.comment_type}">
                     <div class="comment-header">
-                        <span class="comment-author">${comment.profiles.username || 'Anónimo'}</span>
+                        <span class="comment-author">${comment.author_username || 'Anónimo'}</span>
                         <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
                     </div>
                     <p class="comment-body">${comment.content}</p>
                     <div class="comment-actions" data-comment-id="${comment.id}">
-                        <button class="vote-btn ${userVote === 'upvote' ? 'active' : ''}" data-vote-type="upvote">👍 <span>${upvotes}</span></button>
-                        <button class="vote-btn ${userVote === 'downvote' ? 'active' : ''}" data-vote-type="downvote">👎 <span>${downvotes}</span></button>
-                        <button class="vote-btn ${userVote === 'support' ? 'active' : ''}" data-vote-type="support">🤝 <span>${supports}</span> Apoyo</button>
+                        <button class="vote-btn ${userVote === 'upvote' ? 'active' : ''}" data-vote-type="upvote">👍 <span>${comment.upvotes}</span></button>
+                        <button class="vote-btn ${userVote === 'downvote' ? 'active' : ''}" data-vote-type="downvote">👎 <span>${comment.downvotes}</span></button>
+                        <button class="vote-btn ${userVote === 'support' ? 'active' : ''}" data-vote-type="support">🤝 <span>${comment.supports}</span> Apoyo</button>
                     </div>
                 </div>
             `;
