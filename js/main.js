@@ -616,50 +616,61 @@ if (window.location.pathname.includes('admin.html')) {
     const featuredAssetGrid = document.querySelector('#featured .asset-grid');
     if (featuredAssetGrid) {
         async function loadFeaturedProducts() {
-            const { data: products, error } = await supabaseClient
-                .from('products')
-                .select('*')
-                .eq('status', 'approved')
-                .limit(4);
+            try {
+                // 1. Obtener los productos ya ordenados desde la vista de la base de datos
+                const { data: products, error } = await supabaseClient
+                    .from('products_with_ratings')
+                    .select('*')
+                    .eq('status', 'approved')
+                    .order('average_rating', { ascending: false })
+                    .order('rating_count', { ascending: false })
+                    .limit(8);
 
-            if (error) {
-                console.error('Error cargando productos destacados:', error);
-                return;
-            }
+                if (error) throw error;
 
-            if (!products || products.length === 0) {
-                featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
-                return;
-            }
-
-            const productPromises = products.map(async (product) => {
-                const { data: images, error: imageError } = await supabaseClient
-                    .from('product_images')
-                    .select('image_url')
-                    .eq('product_id', product.id)
-                    .limit(1);
-
-                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (imageError) {
-                    console.error(`Error fetching image for product ${product.id}:`, imageError);
-                } else if (images && images.length > 0) {
-                    imageUrl = images[0].image_url;
+                if (!products || products.length === 0) {
+                    featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
+                    return;
                 }
 
-                return `
-                    <a href="product.html?id=${product.id}" class="asset-card">
-                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                        <div class="asset-info">
-                            <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                        </div>
-                    </a>
-                `;
-            });
+                // 2. Renderizar los productos
+                const productPromises = products.map(async (product) => {
+                    const { data: images, error: imageError } = await supabaseClient
+                        .from('product_images')
+                        .select('image_url')
+                        .eq('product_id', product.id)
+                        .limit(1);
 
-            const productHTML = await Promise.all(productPromises);
-            featuredAssetGrid.innerHTML = productHTML.join('');
+                    let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                    if (!imageError && images && images.length > 0) {
+                        imageUrl = images[0].image_url;
+                    }
+
+                    const starsHTML = renderStars(product.average_rating);
+
+                    return `
+                        <a href="product.html?id=${product.id}" class="asset-card">
+                            <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                            <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                            <div class="asset-info">
+                                <h3 class="asset-title">${product.name}</h3>
+                                <div class="asset-rating-summary">
+                                    <span class="stars">${starsHTML}</span>
+                                    <span class="rating-count">(${product.rating_count})</span>
+                                </div>
+                                <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
+                            </div>
+                        </a>
+                    `;
+                });
+
+                const productHTML = await Promise.all(productPromises);
+                featuredAssetGrid.innerHTML = productHTML.join('');
+
+            } catch (error) {
+                 console.error('Error cargando productos destacados:', error);
+                featuredAssetGrid.innerHTML = '<p class="error">No se pudieron cargar los productos destacados.</p>';
+            }
         }
         loadFeaturedProducts();
     }
@@ -704,89 +715,96 @@ if (window.location.pathname.includes('admin.html')) {
     const categoryAssetGrid = document.querySelector('.category-content .asset-grid');
     if (categoryAssetGrid) {
         async function loadCategoryProducts() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const categoryName = urlParams.get('category');
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const categorySlug = urlParams.get('category');
+                const sortBy = urlParams.get('sort') || 'created_at'; // Default sort
+                const sortOrder = urlParams.get('order') || 'desc';
 
-            // Actualizar el título de la página
-            const categoryTitleElement = document.querySelector('.category-title');
-            if (categoryTitleElement) {
-                if (categoryName) {
-                    // Formatear el nombre para mostrar (e.g., 'code-scripts' -> 'Code Scripts')
-                    const formattedName = categoryName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    categoryTitleElement.textContent = formattedName;
+                const categoryTitleElement = document.querySelector('.category-title');
+
+                let query = supabaseClient.from('products_with_ratings').select('*').eq('status', 'approved');
+
+                if (categorySlug) {
+                    const { data: category, error: categoryError } = await supabaseClient.from('categories').select('id, name').eq('slug', categorySlug).single();
+                    if (categoryError || !category) {
+                        console.error('Error: No se encontró la categoría:', categorySlug);
+                        categoryAssetGrid.innerHTML = '<p>La categoría especificada no existe.</p>';
+                        return;
+                    }
+                    query = query.eq('category_id', category.id);
+                    if (categoryTitleElement) categoryTitleElement.textContent = category.name;
                 } else {
-                    categoryTitleElement.textContent = 'Todos los Productos';
+                    if (categoryTitleElement) categoryTitleElement.textContent = 'Todos los Productos';
                 }
-            }
 
-            let query = supabaseClient
-                .from('products')
-                .select('*')
-                .eq('status', 'approved');
+                // Aplicar ordenamiento
+                const orderOptions = { ascending: sortOrder === 'asc' };
+                if (sortBy === 'average_rating') {
+                    query = query.order('average_rating', orderOptions).order('rating_count', { ascending: false });
+                } else {
+                    query = query.order(sortBy, orderOptions);
+                }
 
-            // Si hay un nombre de categoría en la URL, lo usamos para filtrar.
-            if (categoryName) {
-                // Asumimos que la tabla 'categories' tiene una columna 'slug' que coincide
-                // con el parámetro de la URL (e.g., 'code-scripts').
-                // Primero, obtenemos el ID de la categoría a partir de su slug.
-                const { data: category, error: categoryError } = await supabaseClient
-                    .from('categories')
-                    .select('id')
-                    .eq('slug', categoryName)
-                    .single();
+                const { data: products, error } = await query;
 
-                if (categoryError || !category) {
-                    console.error('Error: No se encontró la categoría:', categoryName);
-                    categoryAssetGrid.innerHTML = '<p>La categoría especificada no existe.</p>';
+                if (error) throw error;
+
+                if (!products || products.length === 0) {
+                    categoryAssetGrid.innerHTML = '<p>No hay productos que coincidan con los filtros seleccionados.</p>';
                     return;
                 }
 
-                // Luego, filtramos los productos por ese ID de categoría.
-                query = query.eq('category_id', category.id);
-            }
+                const productPromises = products.map(async (product) => {
+                    const { data: images, error: imageError } = await supabaseClient.from('product_images').select('image_url').eq('product_id', product.id).limit(1);
+                    let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                    if (!imageError && images && images.length > 0) imageUrl = images[0].image_url;
 
-            const { data: products, error } = await query;
+                    const starsHTML = renderStars(product.average_rating);
 
-            if (error) {
+                    return `
+                        <a href="product.html?id=${product.id}" class="asset-card">
+                            <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                            <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                            <div class="asset-info">
+                                <h3 class="asset-title">${product.name}</h3>
+                                <div class="asset-rating-summary">
+                                    <span class="stars">${starsHTML}</span>
+                                    <span class="rating-count">(${product.rating_count})</span>
+                                </div>
+                                <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
+                            </div>
+                        </a>
+                    `;
+                });
+
+                const productHTML = await Promise.all(productPromises);
+                categoryAssetGrid.innerHTML = productHTML.join('');
+
+            } catch (error) {
                 console.error('Error cargando productos de categoría:', error);
-                return;
+                categoryAssetGrid.innerHTML = '<p class="error">No se pudieron cargar los productos.</p>';
             }
-
-            if (!products || products.length === 0) {
-                categoryAssetGrid.innerHTML = '<p>No hay productos en esta categoría.</p>';
-                return;
-            }
-
-            const productPromises = products.map(async (product) => {
-                const { data: images, error: imageError } = await supabaseClient
-                    .from('product_images')
-                    .select('image_url')
-                    .eq('product_id', product.id)
-                    .limit(1);
-
-                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (imageError) {
-                    console.error(`Error fetching image for product ${product.id}:`, imageError);
-                } else if (images && images.length > 0) {
-                    imageUrl = images[0].image_url;
-                }
-
-                return `
-                    <a href="product.html?id=${product.id}" class="asset-card">
-                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                        <div class="asset-info">
-                            <h3 class="asset-title">${product.name}</h3>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                        </div>
-                    </a>
-                `;
-            });
-
-            const productHTML = await Promise.all(productPromises);
-            categoryAssetGrid.innerHTML = productHTML.join('');
         }
         loadCategoryProducts();
+
+        // Lógica para el control de ordenamiento
+        const sortControl = document.getElementById('sort-by');
+        if (sortControl) {
+            sortControl.addEventListener('change', () => {
+                const [sortBy, sortOrder] = sortControl.value.split(':');
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('sort', sortBy);
+                urlParams.set('order', sortOrder);
+                window.location.search = urlParams.toString();
+            });
+
+            // Establecer el valor actual del select basado en la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentSort = urlParams.get('sort') || 'created_at';
+            const currentOrder = urlParams.get('order') || 'desc';
+            sortControl.value = `${currentSort}:${currentOrder}`;
+        }
     }
 
     const approvedProductsList = document.getElementById('approved-products-list');
@@ -1440,90 +1458,87 @@ if (window.location.pathname.includes('admin.html')) {
         });
     }
 
-    // --- Lógica para la página de producto ---
-    if (window.location.pathname.includes('product.html')) {
-        async function loadProductDetails() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const productId = urlParams.get('id');
+// --- Lógica para la página de producto ---
+if (window.location.pathname.includes('product.html')) {
 
-            if (!productId) {
-                document.querySelector('.container').innerHTML = '<h1>Producto no encontrado</h1><p>El ID del producto no se encontró en la URL.</p>';
+    // --- FUNCIÓN PRINCIPAL PARA CARGAR LA PÁGINA DEL PRODUCTO ---
+    async function loadProductDetails() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        if (!productId) {
+            document.querySelector('.container').innerHTML = '<h1>Producto no encontrado</h1><p>El ID del producto no se encontró en la URL.</p>';
+            return;
+        }
+
+        try {
+            // 1. Obtener datos del producto y del usuario simultáneamente
+            const [
+                { data: product, error: productError },
+                { data: { session }, error: sessionError }
+            ] = await Promise.all([
+                supabaseClient.from('products_with_ratings').select('*, profiles(username)').eq('id', productId).single(),
+                supabaseClient.auth.getSession()
+            ]);
+
+            if (productError) throw productError;
+            if (!product) {
+                document.querySelector('.container').innerHTML = '<p>Producto no encontrado.</p>';
                 return;
             }
 
-            // 1. Fetch product and seller info
-            const { data: product, error: productError } = await supabaseClient
-                .from('products')
-                .select('*, profiles(username)')
-                .eq('id', productId)
-                .single();
-
-            if (productError || !product) {
-                console.error('Error fetching product:', productError);
-                document.querySelector('.container').innerHTML = '<h1>Error</h1><p>No se pudo cargar el producto. Es posible que no exista o haya sido eliminado.</p>';
-                return;
-            }
-
-            // 2. Fetch product images
-            const { data: images, error: imageError } = await supabaseClient
-                .from('product_images')
-                .select('image_url')
-                .eq('product_id', productId);
-
-            // 3. Populate the page
+            // 2. Renderizar la información básica del producto
             document.title = `${product.name} - Creative Engine Asset Store`;
             document.querySelector('.product-title').textContent = product.name;
-            document.querySelector('.product-author a').textContent = (product.profiles ? product.profiles.username : 'Vendedor Desconocido') || 'Vendedor Desconocido';
-            document.querySelector('.product-price').textContent = product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`;
+            document.querySelector('.product-author a').textContent = product.profiles.username || 'Desconocido';
+            document.querySelector('.product-price').textContent = product.price > 0 ? `\$${product.price.toFixed(2)}` : 'Gratis';
             document.querySelector('.product-description').innerHTML = `<h2>Descripción</h2><p>${product.description.replace(/\n/g, '<br>')}</p>`;
+            document.querySelector('.product-license').innerHTML = `<h2>Licencia</h2><p>${product.license || 'No especificada.'}</p>`;
 
+
+            // Renderizar estrellas de calificación promedio
+            const averageRatingEl = document.getElementById('product-average-rating');
+            averageRatingEl.innerHTML = renderStars(product.average_rating) + ` (${product.rating_count} reseña${product.rating_count === 1 ? '' : 's'})`;
+
+            // 3. Cargar media
+            const { data: images, error: imageError } = await supabaseClient.from('product_images').select('image_url').eq('product_id', productId);
             const mainMediaContainer = document.querySelector('.main-media');
             const thumbnailGallery = document.querySelector('.thumbnail-gallery');
-            thumbnailGallery.innerHTML = ''; // Clear placeholders
+            thumbnailGallery.innerHTML = '';
 
-            let mediaItems = [];
-            if (images && images.length > 0) {
-                mediaItems = images.map(img => ({ type: 'image', url: img.image_url }));
-            }
-            if (product.youtube_url) {
-                mediaItems.unshift({ type: 'video', url: product.youtube_url });
-            }
+            let mediaItems = (images || []).map(img => ({ type: 'image', url: img.image_url }));
+            if (product.youtube_url) mediaItems.unshift({ type: 'video', url: product.youtube_url });
 
             function displayMedia(media) {
-                if (media.type === 'image') {
-                    mainMediaContainer.innerHTML = `<img src="${media.url}" alt="${product.name}">`;
-                } else if (media.type === 'video') {
+                if (media.type === 'image') mainMediaContainer.innerHTML = `<img src="${media.url}" alt="${product.name}">`;
+                else {
                     const videoId = media.url.split('v=')[1]?.split('&')[0] || media.url.split('/').pop();
-                    mainMediaContainer.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                    mainMediaContainer.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
                 }
             }
 
             if (mediaItems.length > 0) {
                 displayMedia(mediaItems[0]);
-
                 mediaItems.forEach((media, index) => {
                     const thumb = document.createElement('img');
-                    thumb.classList.add('thumbnail');
+                    thumb.className = 'thumbnail';
                     if (index === 0) thumb.classList.add('active');
-
-                    if (media.type === 'image') {
-                        thumb.src = media.url;
-                    } else {
+                    if (media.type === 'image') thumb.src = media.url;
+                    else {
                         const videoId = media.url.split('v=')[1]?.split('&')[0] || media.url.split('/').pop();
                         thumb.src = `https://img.youtube.com/vi/${videoId}/0.jpg`;
                     }
-
-                    thumb.addEventListener('click', () => {
+                    thumb.onclick = () => {
                         displayMedia(media);
                         document.querySelectorAll('.thumbnail.active').forEach(t => t.classList.remove('active'));
                         thumb.classList.add('active');
-                    });
+                    };
                     thumbnailGallery.appendChild(thumb);
                 });
-            } else {
-                 mainMediaContainer.innerHTML = `<img src="https://via.placeholder.com/560x315.png?text=No+Media" alt="No media available">`;
-            }
+            } else mainMediaContainer.innerHTML = `<img src="https://via.placeholder.com/560x315.png?text=No+Media" alt="No media available">`;
 
+            // 4. Configurar botones de acción
+            const { data: { user } } = await supabaseClient.auth.getUser();
             const buyPointsBtn = document.querySelector('.btn-buy-points');
             const getFreeBtn = document.querySelector('.btn-get-free');
             const wishlistBtn = document.querySelector('.wishlist-btn-large');
@@ -1541,11 +1556,198 @@ if (window.location.pathname.includes('admin.html')) {
                 buyPointsBtn.style.display = 'none';
                 getFreeBtn.style.display = 'inline-block';
             } else {
-                 paypalContainer.style.display = 'block';
-                 buyPointsBtn.style.display = 'inline-block';
-                 getFreeBtn.style.display = 'none';
+                paypalContainer.style.display = 'block';
+                buyPointsBtn.style.display = 'inline-block';
+                getFreeBtn.style.display = 'none';
             }
+
+            // 5. Lógica de calificaciones y comentarios
+            const reviewSection = document.getElementById('review-section');
+            if (session) {
+                const { data: ownership } = await supabaseClient.from('user_owned_assets').select('id').eq('user_id', user.id).eq('product_id', productId).maybeSingle();
+                if (ownership) {
+                    reviewSection.style.display = 'block';
+                    initializeReviewForm(productId, user);
+                } else {
+                    reviewSection.style.display = 'none';
+                }
+            } else {
+                reviewSection.style.display = 'none';
+            }
+
+            // 6. Cargar y mostrar los comentarios existentes
+            await loadComments(productId, session ? session.user : null);
+
+        } catch (error) {
+            console.error('Error cargando detalles del producto:', error);
+            document.querySelector('.container').innerHTML = `<p>Error al cargar el producto: ${error.message}</p>`;
         }
-        loadProductDetails();
     }
+
+    loadProductDetails();
+}
+
+// --- NUEVAS FUNCIONES PARA CALIFICACIONES Y COMENTARIOS ---
+
+// Función para renderizar estrellas (visualización y formulario)
+function renderStars(rating) {
+    let starsHtml = '';
+    const fullStars = Math.round(rating); // Redondeamos para visualización simple
+    for (let i = 1; i <= 5; i++) {
+        starsHtml += `<span data-value="${i}">${i <= fullStars ? '★' : '☆'}</span>`;
+    }
+    return starsHtml;
+}
+
+function setupInteractiveStars(targetElement) {
+    targetElement.innerHTML = renderStars(0); // Empezar con 0 estrellas
+    const stars = targetElement.querySelectorAll('span');
+
+    const handleStarHover = (rating) => {
+        stars.forEach(star => {
+            star.textContent = parseInt(star.dataset.value) <= rating ? '★' : '☆';
+        });
+    };
+
+    stars.forEach(star => {
+        star.addEventListener('mouseover', () => handleStarHover(parseInt(star.dataset.value)));
+        star.addEventListener('mouseout', () => handleStarHover(parseInt(targetElement.dataset.rating || '0')));
+        star.addEventListener('click', () => {
+            const rating = parseInt(star.dataset.value);
+            targetElement.dataset.rating = rating; // Guardar la calificación seleccionada
+            handleStarHover(rating);
+        });
+    });
+}
+
+// Función para inicializar el formulario de reseña
+function initializeReviewForm(productId, user) {
+    const form = document.getElementById('review-form');
+    const starsContainer = document.getElementById('user-rating-stars');
+    const commentTypeSelector = document.querySelector('.comment-type-selector');
+    let selectedCommentType = null;
+
+    setupInteractiveStars(starsContainer);
+
+    commentTypeSelector.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') {
+            commentTypeSelector.querySelectorAll('.btn').forEach(btn => btn.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedCommentType = e.target.dataset.type;
+        }
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rating = parseInt(starsContainer.dataset.rating || '0');
+        const comment = document.getElementById('comment-text').value;
+
+        if (rating === 0 && !comment.trim()) {
+            alert("Por favor, selecciona una calificación o escribe un comentario.");
+            return;
+        }
+        if (comment.trim() && !selectedCommentType) {
+            alert("Por favor, selecciona si tu comentario es positivo o negativo.");
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient.functions.invoke('submit-review', {
+                body: {
+                    productId,
+                    rating: rating > 0 ? rating : null,
+                    comment: comment.trim() || null,
+                    commentType: selectedCommentType
+                }
+            });
+
+            if (error) throw error;
+            if(data.error) throw new Error(data.error);
+
+            alert("¡Reseña enviada con éxito!");
+            location.reload();
+
+
+        } catch (error) {
+            console.error('Error al enviar la reseña:', error);
+            alert(`Error: ${error.message}`);
+        }
+    });
+}
+
+// Función para cargar y mostrar los comentarios
+async function loadComments(productId, user) {
+    const commentsList = document.getElementById('comments-list');
+    commentsList.innerHTML = '<p>Cargando comentarios...</p>';
+
+    try {
+        const { data: comments, error } = await supabaseClient
+            .from('comments')
+            .select('*, profiles(username), comment_votes(*)')
+            .eq('product_id', productId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (comments.length === 0) {
+            commentsList.innerHTML = '<p>Todavía no hay comentarios. ¡Sé el primero!</p>';
+            return;
+        }
+
+        const commentsHtml = comments.map(comment => {
+            const upvotes = comment.comment_votes.filter(v => v.vote_type === 'upvote').length;
+            const downvotes = comment.comment_votes.filter(v => v.vote_type === 'downvote').length;
+            const supports = comment.comment_votes.filter(v => v.vote_type === 'support').length;
+            let userVote = user ? comment.comment_votes.find(v => v.user_id === user.id)?.vote_type : null;
+
+            return `
+                <div class="comment-card ${comment.comment_type}">
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.profiles.username || 'Anónimo'}</span>
+                        <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p class="comment-body">${comment.content}</p>
+                    <div class="comment-actions" data-comment-id="${comment.id}">
+                        <button class="vote-btn ${userVote === 'upvote' ? 'active' : ''}" data-vote-type="upvote">👍 <span>${upvotes}</span></button>
+                        <button class="vote-btn ${userVote === 'downvote' ? 'active' : ''}" data-vote-type="downvote">👎 <span>${downvotes}</span></button>
+                        <button class="vote-btn ${userVote === 'support' ? 'active' : ''}" data-vote-type="support">🤝 <span>${supports}</span> Apoyo</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        commentsList.innerHTML = commentsHtml;
+
+    } catch (error) {
+        console.error('Error al cargar comentarios:', error);
+        commentsList.innerHTML = `<p>Error al cargar comentarios: ${error.message}</p>`;
+    }
+}
+
+// Listener para votos en comentarios (delegado)
+document.addEventListener('click', async (e) => {
+    const voteButton = e.target.closest('.vote-btn');
+    if (!voteButton || !window.location.pathname.includes('product.html')) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        alert("Debes iniciar sesión para votar.");
+        return;
+    }
+
+    const commentId = voteButton.parentElement.dataset.commentId;
+    const voteType = voteButton.dataset.voteType;
+
+    try {
+        const { error } = await supabaseClient.functions.invoke('vote-comment', {
+            body: { commentId, voteType }
+        });
+        if (error) throw error;
+
+        // Recargar todo para actualizar los votos
+        location.reload();
+    } catch (error) {
+        console.error('Error al votar:', error);
+        alert(`Error: ${error.message}`);
+    }
+});
 });
