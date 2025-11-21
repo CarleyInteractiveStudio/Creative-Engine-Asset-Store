@@ -1808,6 +1808,7 @@ document.addEventListener('click', async (e) => {
         alert(`Error: ${error.message}`);
     }
 });
+});
 
 // --- Nueva Función para Renderizar Detalles de la Licencia ---
 function renderLicenseDetails(product) {
@@ -1895,4 +1896,6 @@ document.body.addEventListener('click', async (e) => {
         button.disabled = false;
         button.textContent = originalText;
     }
+});
+
 });
