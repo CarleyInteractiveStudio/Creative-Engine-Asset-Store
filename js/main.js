@@ -1808,7 +1808,6 @@ document.addEventListener('click', async (e) => {
         alert(`Error: ${error.message}`);
     }
 });
-});
 
 // --- Nueva Función para Renderizar Detalles de la Licencia ---
 function renderLicenseDetails(product) {
