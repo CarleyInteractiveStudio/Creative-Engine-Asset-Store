@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Categoría - Creative Engine Asset Store</title>
+    <title>Búsqueda - Creative Engine Asset Store</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -29,29 +29,24 @@
                 <h3>Filtros</h3>
                 <div class="filter-group">
                     <h4>Ordenar por</h4>
-                    <select name="sort" id="sort">
-                        <option value="newest">Más Nuevos</option>
-                        <option value="price-asc">Precio: Menor a Mayor</option>
-                        <option value="price-desc">Precio: Mayor a Menor</option>
-                        <option value="rating">Mejor Valorados</option>
+                    <select id="sort-by" class="filter-control">
+                        <option value="average_rating:desc">Mejor Calificados</option>
+                        <option value="created_at:desc">Más Nuevos</option>
+                        <option value="price:asc">Precio: de Menor a Mayor</option>
+                        <option value="price:desc">Precio: de Mayor a Menor</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <h4>Precio</h4>
-                    <input type="range" min="0" max="100" value="100">
-                    <span>Hasta $100</span>
+                    <h4>Precio Máximo</h4>
+                    <input type="range" id="max-price-slider" min="0" max="200" value="200" class="filter-control">
+                    <span id="max-price-value">Hasta $200</span>
                 </div>
-                <div class="filter-group">
-                    <h4>Plataforma</h4>
-                    <label><input type="checkbox" name="platform" value="all" checked> Todas</label>
-                    <label><input type="checkbox" name="platform" value="windows"> Windows</label>
-                    <label><input type="checkbox" name="platform" value="mac"> macOS</label>
-                    <label><input type="checkbox" name="platform" value="linux"> Linux</label>
-                </div>
+                 <button id="apply-filters-btn" class="btn btn-primary">Aplicar Filtros</button>
             </aside>
             <section class="category-content">
-                <h1 class="category-title">Scripts</h1>
-                <div class="asset-grid">
+                <h1 class="category-title">Resultados de Búsqueda</h1>
+                <p class="search-query-display">Mostrando resultados para: "<span id="search-query"></span>"</p>
+                <div class="asset-grid" id="search-results-grid">
                     <!-- Product cards will be populated by JS -->
                 </div>
             </section>

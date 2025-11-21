@@ -28,7 +28,10 @@
             <div class="hero-content">
                 <h1>El mejor lugar para tus Assets</h1>
                 <p>Encuentra todo lo que necesitas para tu próximo proyecto en Creative Engine.</p>
-                <a href="#featured" class="btn btn-primary btn-large">Explorar Assets</a>
+                <form action="search.html" method="GET" class="hero-search-form">
+                    <input type="search" name="query" placeholder="Buscar por nombre, descripción..." class="search-input" required>
+                    <button type="submit" class="btn btn-primary">Buscar</button>
+                </form>
             </div>
         </section>
 

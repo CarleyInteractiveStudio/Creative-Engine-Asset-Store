@@ -26,29 +26,18 @@
 
     <main class="container">
         <div class="product-details-layout">
-            <!-- Columna Izquierda: Media y Comentarios -->
-            <div class="product-main-column">
-                <div class="product-media">
-                    <div class="main-media">
-                        <!-- Main image or video will appear here -->
-                    </div>
-                    <div class="thumbnail-gallery">
-                        <!-- Thumbnails will appear here -->
-                    </div>
+            <!-- Product details will be loaded here by js/main.js -->
+            <div class="product-media">
+                <div class="main-media">
+                    <!-- Main image or video will appear here -->
                 </div>
-                <div id="comments-display-section" class="comments-display">
-                    <h2>Comentarios de la Comunidad</h2>
-                    <div id="comments-list">
-                        <!-- Los comentarios se cargarán aquí dinámicamente -->
-                    </div>
+                <div class="thumbnail-gallery">
+                    <!-- Thumbnails will appear here -->
                 </div>
             </div>
-
-            <!-- Columna Derecha: Información y Formulario de Reseña -->
             <div class="product-info-panel">
                 <h1 class="product-title">Cargando...</h1>
                 <div class="product-author">por <a href="#">...</a></div>
-                <div id="product-average-rating" class="product-rating"></div>
                 <div class="product-price">...</div>
                 <div class="product-actions">
                     <div id="paypal-button-container"></div>
@@ -59,27 +48,8 @@
                 <div class="product-description">
                     <h2>Descripción</h2>
                 </div>
-                <div id="product-license-section" class="product-license">
+                <div class="product-license">
                     <h2>Licencia</h2>
-                    <div id="license-details">
-                        <!-- Los detalles de la licencia se cargarán aquí -->
-                    </div>
-                </div>
-                 <!-- Sección de Calificación y Comentarios (Formulario) -->
-                <div id="review-section" class="review-section" style="display: none;">
-                    <h3>Deja tu reseña</h3>
-                    <div id="user-rating-stars" class="rating-stars">
-                        <!-- Estrellas para input -->
-                        <span>☆</span><span>☆</span><span>☆</span><span>☆</span><span>☆</span>
-                    </div>
-                    <form id="review-form">
-                        <textarea id="comment-text" placeholder="Escribe tu comentario aquí..."></textarea>
-                        <div class="comment-type-selector">
-                            <button type="button" class="btn btn-positive" data-type="positive">Positivo</button>
-                            <button type="button" class="btn btn-negative" data-type="negative">Negativo</button>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Enviar Reseña</button>
-                    </form>
                 </div>
             </div>
         </div>

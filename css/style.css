@@ -49,6 +49,42 @@ a {
     color: var(--secondary-color);
 }
 
+/* --- Estilos para el Formulario de Búsqueda en la Página Principal --- */
+.hero-search-form {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+    gap: 10px;
+}
+
+.hero-search-form .search-input {
+    width: 100%;
+    max-width: 500px;
+    padding: 15px 20px;
+    font-size: 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 5px;
+    background-color: var(--white-color);
+}
+
+.hero-search-form .btn {
+    padding: 15px 30px;
+    font-size: 1rem;
+}
+
+/* --- Estilos para la Página de Resultados de Búsqueda --- */
+.search-query-display {
+    font-size: 1.2rem;
+    color: #555;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.search-query-display #search-query {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
 .dashboard-product-thumbnail {
     width: 100px;
     height: 75px;
@@ -828,170 +864,4 @@ body {
     font-size: 1.2rem;
     font-weight: bold;
     color: var(--secondary-color);
-}
-
-/* --- Estilos para la Sección de Calificaciones y Comentarios --- */
-.product-rating {
-    margin: 10px 0;
-    font-size: 1.2em;
-}
-.rating-stars {
-    color: #ffc107; /* Color de las estrellas */
-    cursor: pointer;
-}
-.rating-stars span:hover {
-    color: #ff9800;
-}
-.review-section {
-    margin-top: 20px;
-    padding: 20px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-}
-.review-section h3 {
-    margin-top: 0;
-}
-.review-section textarea {
-    width: 100%;
-    min-height: 100px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    resize: vertical;
-    margin-bottom: 10px;
-}
-.comment-type-selector {
-    margin-bottom: 15px;
-}
-.comment-type-selector .btn {
-    margin-right: 10px;
-    border: 2px solid transparent;
-}
-.comment-type-selector .btn.selected {
-    border-color: #007bff; /* Un borde para indicar selección */
-    box-shadow: 0 0 5px rgba(0,123,255,0.5);
-}
-.btn-positive {
-    background-color: #ffc107; /* Naranja/Amarillo de la tienda */
-    color: #212529;
-}
-.btn-negative {
-    background-color: #343a40; /* Negro de la tienda */
-    color: #fff;
-}
-
-/* --- Estilos para la Visualización de Comentarios --- */
-.comments-display {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
-}
-.comment-card {
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 15px;
-    margin-bottom: 15px;
-    background-color: #fff;
-}
-.comment-card.positive {
-    border-left: 5px solid #ffc107;
-}
-.comment-card.negative {
-    border-left: 5px solid #343a40;
-}
-.comment-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    color: #6c757d;
-    font-size: 0.9em;
-}
-.comment-author {
-    font-weight: bold;
-}
-.comment-body {
-    margin-bottom: 15px;
-}
-.comment-actions {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-.comment-actions button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.1em;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: #6c757d;
-}
-.comment-actions button:hover {
-    color: #007bff;
-}
-.comment-actions button.active {
-    color: #0056b3; /* Un color más oscuro para indicar que ya se votó */
-    font-weight: bold;
-}
-
-/* --- Estilos para Tarjetas de Producto (Inicio y Categorías) --- */
-.asset-rating-summary {
-    display: flex;
-    align-items: center;
-    font-size: 0.9em;
-    margin: 5px 0;
-}
-
-.asset-rating-summary .stars {
-    color: #ffc107;
-    margin-right: 5px;
-}
-
-.asset-rating-summary .rating-count {
-    color: #6c757d;
-}
-
-/* --- Estilos para Controles de Filtro en la Página de Categoría --- */
-.filters-sidebar .filter-group {
-    margin-bottom: 20px;
-    border-top: 1px solid #eee;
-    padding-top: 15px;
-}
-
-.filters-sidebar .filter-group:first-child {
-    border-top: none;
-    padding-top: 0;
-}
-
-.filters-sidebar h4 {
-    margin-bottom: 10px;
-}
-
-.filters-sidebar .filter-control {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-}
-
-
-/* --- Nuevos Estilos para el Layout de la Página de Producto --- */
-.product-details-layout {
-    display: flex;
-    gap: 30px; /* Espacio entre la columna de media/comentarios y la de info */
-    align-items: flex-start; /* Alinear las columnas en la parte superior */
-}
-
-.product-main-column {
-    flex: 2; /* La columna izquierda ocupará 2/3 del espacio */
-    min-width: 0; /* Necesario para que flexbox maneje el tamaño correctamente */
-}
-
-.product-info-panel {
-    flex: 1; /* La columna derecha ocupará 1/3 del espacio */
-    position: sticky; /* Hacer que la columna de info se quede fija al hacer scroll */
-    top: 20px; /* Espacio desde la parte superior */
 }

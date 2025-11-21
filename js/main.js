@@ -182,19 +182,6 @@ if (window.location.pathname.includes('admin.html')) {
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
 
-        // Lógica para mostrar/ocultar campos de licencia personalizada
-        const licenseTypeSelect = document.getElementById('license-type');
-        const customLicenseFields = document.getElementById('custom-license-fields');
-        if (licenseTypeSelect && customLicenseFields) {
-            licenseTypeSelect.addEventListener('change', (e) => {
-                if (e.target.value === 'custom') {
-                    customLicenseFields.style.display = 'block';
-                } else {
-                    customLicenseFields.style.display = 'none';
-                }
-            });
-        }
-
         const imagesInput = document.getElementById('product-images');
         imagesInput.addEventListener('change', (e) => {
             if (e.target.files.length > 3) {
@@ -231,9 +218,6 @@ if (window.location.pathname.includes('admin.html')) {
             const price = e.target.price.value;
             const categoryId = e.target.category.value;
             const youtubeUrl = e.target['youtube-link'].value;
-            const licenseType = e.target['license-type'].value;
-            const customSellerRights = e.target['custom-seller-rights'].value;
-            const customBuyerRights = e.target['custom-buyer-rights'].value;
             const mainFile = e.target['product-file'].files[0];
             const images = e.target['product-images'].files;
 
@@ -267,46 +251,25 @@ if (window.location.pathname.includes('admin.html')) {
                 submitButton.disabled = true;
                 showOverlay('Subiendo producto...');
 
-                // --- Generación del contenido de la licencia ---
-                let licenseContent = `Licencia para: ${productName}\n`;
-                licenseContent += `Tipo de Licencia: ${licenseType}\n\n`;
-
-                switch (licenseType) {
-                    case 'standard_paid':
-                        licenseContent += "Términos: El comprador puede usar este asset en un número ilimitado de proyectos comerciales. No se requiere atribución al autor original.";
-                        break;
-                    case 'exclusive':
-                        licenseContent += "Términos: Esta es una licencia de venta única. Una vez comprado, este producto se eliminará de la tienda. El comprador adquiere plenos derechos para usar, modificar y distribuir el asset en cualquier tipo de proyecto. El vendedor original renuncia a todos los derechos sobre el asset y se compromete a no revenderlo ni distribuirlo en ningún otro lugar.";
-                        break;
-                    case 'free_educational':
-                        licenseContent += "Términos: Este asset puede ser utilizado libremente en proyectos personales y educativos. No está permitido su uso en proyectos comerciales. No se puede redistribuir el asset sin el permiso explícito del creador original.";
-                        break;
-                    case 'free_commercial':
-                        licenseContent += "Términos: Este asset puede ser utilizado en proyectos comerciales y personales. Se requiere dar crédito/atribución al autor original del producto.";
-                        break;
-                    case 'custom':
-                        licenseContent += `Derechos del Vendedor:\n${customSellerRights}\n\nDerechos del Comprador:\n${customBuyerRights}`;
-                        break;
-                }
-                const licenseFile = new Blob([licenseContent], { type: 'text/plain' });
-                const licenseFilePath = `${user.id}/${Date.now()}-licencia.txt`;
-
-                // 1. Subir archivo de licencia
-                overlayMessage.textContent = 'Subiendo licencia...';
-                const { error: licenseFileError } = await supabaseClient.storage
-                    .from('product_licenses')
-                    .upload(licenseFilePath, licenseFile);
-                if (licenseFileError) throw licenseFileError;
-
-                // 2. Subir archivo principal
+                // 1. Subir archivo principal
                 overlayMessage.textContent = 'Subiendo archivo principal...';
-                const mainFilePath = `${user.id}/${Date.now()}-${mainFile.name.replace(/\s+/g, '_')}`;
+                const timestamp = Date.now();
+                const sanitizedMainFileName = mainFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+                const mainFilePath = `${user.id}/${timestamp}-${sanitizedMainFileName}`;
                 const { error: mainFileError } = await supabaseClient.storage
                     .from('product_files')
-                    .upload(mainFilePath, mainFile);
+                    .upload(mainFilePath, mainFile, {
+                        // La privacidad del archivo es controlada por la política del bucket en Supabase,
+                        // no por estas opciones. Estas opciones son para el control de caché.
+                        cacheControl: '3600',
+                        upsert: false
+                    });
                 if (mainFileError) throw mainFileError;
 
-                // 3. Insertar en la tabla 'products'
+                // YA NO generamos una URL pública. Guardamos la RUTA.
+                const mainFileUrl = mainFilePath;
+
+                // 2. Insertar en la tabla 'products'
                 overlayMessage.textContent = 'Guardando detalles del producto...';
                 const { data: productData, error: productError } = await supabaseClient
                     .from('products')
@@ -317,11 +280,7 @@ if (window.location.pathname.includes('admin.html')) {
                         category_id: categoryId,
                         youtube_url: youtubeUrl,
                         seller_id: user.id,
-                        main_file_url: mainFilePath,
-                        license_file_path: licenseFilePath, // Guardar ruta de la licencia
-                        license_type: licenseType,
-                        custom_license_seller_rights: customSellerRights || null,
-                        custom_license_buyer_rights: customBuyerRights || null,
+                        main_file_url: mainFileUrl, // Guardamos la ruta, no la URL pública
                         status: 'pending'
                     })
                     .select()
@@ -657,61 +616,50 @@ if (window.location.pathname.includes('admin.html')) {
     const featuredAssetGrid = document.querySelector('#featured .asset-grid');
     if (featuredAssetGrid) {
         async function loadFeaturedProducts() {
-            try {
-                // 1. Obtener los productos ya ordenados desde la vista de la base de datos
-                const { data: products, error } = await supabaseClient
-                    .from('products_with_ratings')
-                    .select('*')
-                    .eq('status', 'approved')
-                    .order('average_rating', { ascending: false })
-                    .order('rating_count', { ascending: false })
-                    .limit(8);
+            const { data: products, error } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('status', 'approved')
+                .limit(4);
 
-                if (error) throw error;
+            if (error) {
+                console.error('Error cargando productos destacados:', error);
+                return;
+            }
 
-                if (!products || products.length === 0) {
-                    featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
-                    return;
+            if (!products || products.length === 0) {
+                featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
+                return;
+            }
+
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (imageError) {
+                    console.error(`Error fetching image for product ${product.id}:`, imageError);
+                } else if (images && images.length > 0) {
+                    imageUrl = images[0].image_url;
                 }
 
-                // 2. Renderizar los productos
-                const productPromises = products.map(async (product) => {
-                    const { data: images, error: imageError } = await supabaseClient
-                        .from('product_images')
-                        .select('image_url')
-                        .eq('product_id', product.id)
-                        .limit(1);
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
+                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
+                        </div>
+                    </a>
+                `;
+            });
 
-                    let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                    if (!imageError && images && images.length > 0) {
-                        imageUrl = images[0].image_url;
-                    }
-
-                    const starsHTML = renderStars(product.average_rating);
-
-                    return `
-                        <a href="product.html?id=${product.id}" class="asset-card">
-                            <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                            <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                            <div class="asset-info">
-                                <h3 class="asset-title">${product.name}</h3>
-                                <div class="asset-rating-summary">
-                                    <span class="stars">${starsHTML}</span>
-                                    <span class="rating-count">(${product.rating_count})</span>
-                                </div>
-                                <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                            </div>
-                        </a>
-                    `;
-                });
-
-                const productHTML = await Promise.all(productPromises);
-                featuredAssetGrid.innerHTML = productHTML.join('');
-
-            } catch (error) {
-                 console.error('Error cargando productos destacados:', error);
-                featuredAssetGrid.innerHTML = '<p class="error">No se pudieron cargar los productos destacados.</p>';
-            }
+            const productHTML = await Promise.all(productPromises);
+            featuredAssetGrid.innerHTML = productHTML.join('');
         }
         loadFeaturedProducts();
     }
@@ -756,96 +704,89 @@ if (window.location.pathname.includes('admin.html')) {
     const categoryAssetGrid = document.querySelector('.category-content .asset-grid');
     if (categoryAssetGrid) {
         async function loadCategoryProducts() {
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const categorySlug = urlParams.get('category');
-                const sortBy = urlParams.get('sort') || 'created_at'; // Default sort
-                const sortOrder = urlParams.get('order') || 'desc';
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryName = urlParams.get('category');
 
-                const categoryTitleElement = document.querySelector('.category-title');
-
-                let query = supabaseClient.from('products_with_ratings').select('*').eq('status', 'approved');
-
-                if (categorySlug) {
-                    const { data: category, error: categoryError } = await supabaseClient.from('categories').select('id, name').eq('slug', categorySlug).single();
-                    if (categoryError || !category) {
-                        console.error('Error: No se encontró la categoría:', categorySlug);
-                        categoryAssetGrid.innerHTML = '<p>La categoría especificada no existe.</p>';
-                        return;
-                    }
-                    query = query.eq('category_id', category.id);
-                    if (categoryTitleElement) categoryTitleElement.textContent = category.name;
+            // Actualizar el título de la página
+            const categoryTitleElement = document.querySelector('.category-title');
+            if (categoryTitleElement) {
+                if (categoryName) {
+                    // Formatear el nombre para mostrar (e.g., 'code-scripts' -> 'Code Scripts')
+                    const formattedName = categoryName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    categoryTitleElement.textContent = formattedName;
                 } else {
-                    if (categoryTitleElement) categoryTitleElement.textContent = 'Todos los Productos';
+                    categoryTitleElement.textContent = 'Todos los Productos';
                 }
+            }
 
-                // Aplicar ordenamiento
-                const orderOptions = { ascending: sortOrder === 'asc' };
-                if (sortBy === 'average_rating') {
-                    query = query.order('average_rating', orderOptions).order('rating_count', { ascending: false });
-                } else {
-                    query = query.order(sortBy, orderOptions);
-                }
+            let query = supabaseClient
+                .from('products')
+                .select('*')
+                .eq('status', 'approved');
 
-                const { data: products, error } = await query;
+            // Si hay un nombre de categoría en la URL, lo usamos para filtrar.
+            if (categoryName) {
+                // Asumimos que la tabla 'categories' tiene una columna 'slug' que coincide
+                // con el parámetro de la URL (e.g., 'code-scripts').
+                // Primero, obtenemos el ID de la categoría a partir de su slug.
+                const { data: category, error: categoryError } = await supabaseClient
+                    .from('categories')
+                    .select('id')
+                    .eq('slug', categoryName)
+                    .single();
 
-                if (error) throw error;
-
-                if (!products || products.length === 0) {
-                    categoryAssetGrid.innerHTML = '<p>No hay productos que coincidan con los filtros seleccionados.</p>';
+                if (categoryError || !category) {
+                    console.error('Error: No se encontró la categoría:', categoryName);
+                    categoryAssetGrid.innerHTML = '<p>La categoría especificada no existe.</p>';
                     return;
                 }
 
-                const productPromises = products.map(async (product) => {
-                    const { data: images, error: imageError } = await supabaseClient.from('product_images').select('image_url').eq('product_id', product.id).limit(1);
-                    let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                    if (!imageError && images && images.length > 0) imageUrl = images[0].image_url;
-
-                    const starsHTML = renderStars(product.average_rating);
-
-                    return `
-                        <a href="product.html?id=${product.id}" class="asset-card">
-                            <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                            <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                            <div class="asset-info">
-                                <h3 class="asset-title">${product.name}</h3>
-                                <div class="asset-rating-summary">
-                                    <span class="stars">${starsHTML}</span>
-                                    <span class="rating-count">(${product.rating_count})</span>
-                                </div>
-                                <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                            </div>
-                        </a>
-                    `;
-                });
-
-                const productHTML = await Promise.all(productPromises);
-                categoryAssetGrid.innerHTML = productHTML.join('');
-
-            } catch (error) {
-                console.error('Error cargando productos de categoría:', error);
-                categoryAssetGrid.innerHTML = '<p class="error">No se pudieron cargar los productos.</p>';
+                // Luego, filtramos los productos por ese ID de categoría.
+                query = query.eq('category_id', category.id);
             }
-        }
-        loadCategoryProducts();
 
-        // Lógica para el control de ordenamiento
-        const sortControl = document.getElementById('sort-by');
-        if (sortControl) {
-            sortControl.addEventListener('change', () => {
-                const [sortBy, sortOrder] = sortControl.value.split(':');
-                const urlParams = new URLSearchParams(window.location.search);
-                urlParams.set('sort', sortBy);
-                urlParams.set('order', sortOrder);
-                window.location.search = urlParams.toString();
+            const { data: products, error } = await query;
+
+            if (error) {
+                console.error('Error cargando productos de categoría:', error);
+                return;
+            }
+
+            if (!products || products.length === 0) {
+                categoryAssetGrid.innerHTML = '<p>No hay productos en esta categoría.</p>';
+                return;
+            }
+
+            const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', product.id)
+                    .limit(1);
+
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (imageError) {
+                    console.error(`Error fetching image for product ${product.id}:`, imageError);
+                } else if (images && images.length > 0) {
+                    imageUrl = images[0].image_url;
+                }
+
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
+                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
+                        </div>
+                    </a>
+                `;
             });
 
-            // Establecer el valor actual del select basado en la URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentSort = urlParams.get('sort') || 'created_at';
-            const currentOrder = urlParams.get('order') || 'desc';
-            sortControl.value = `${currentSort}:${currentOrder}`;
+            const productHTML = await Promise.all(productPromises);
+            categoryAssetGrid.innerHTML = productHTML.join('');
         }
+        loadCategoryProducts();
     }
 
     const approvedProductsList = document.getElementById('approved-products-list');
@@ -1257,10 +1198,7 @@ if (window.location.pathname.includes('admin.html')) {
                             <a href="product.html?id=${product.id}" style="text-decoration: none; color: inherit;">
                                 <h3 class="asset-title">${product.name}</h3>
                             </a>
-                            <div class="my-assets-actions">
-                                <button class="btn btn-primary download-btn" data-product-id="${product.id}">Descargar Producto</button>
-                                ${product.license_file_path ? `<button class="btn btn-secondary download-license-btn" data-license-path="${product.license_file_path}">Descargar Licencia</button>` : ''}
-                            </div>
+                            <button class="btn btn-primary download-btn" data-product-id="${product.id}">Descargar</button>
                         </div>
                     </div>
                 `;
@@ -1502,89 +1440,90 @@ if (window.location.pathname.includes('admin.html')) {
         });
     }
 
-// --- Lógica para la página de producto ---
-if (window.location.pathname.includes('product.html')) {
+    // --- Lógica para la página de producto ---
+    if (window.location.pathname.includes('product.html')) {
+        async function loadProductDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
 
-    // --- FUNCIÓN PRINCIPAL PARA CARGAR LA PÁGINA DEL PRODUCTO ---
-    async function loadProductDetails() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
-
-        if (!productId) {
-            document.querySelector('.container').innerHTML = '<h1>Producto no encontrado</h1><p>El ID del producto no se encontró en la URL.</p>';
-            return;
-        }
-
-        try {
-            // 1. Obtener datos del producto y del usuario simultáneamente
-            const [
-                { data: product, error: productError },
-                { data: { session }, error: sessionError }
-            ] = await Promise.all([
-                supabaseClient.from('products_with_ratings').select('*, profiles(username)').eq('id', productId).single(),
-                supabaseClient.auth.getSession()
-            ]);
-
-            if (productError) throw productError;
-            if (!product) {
-                document.querySelector('.container').innerHTML = '<p>Producto no encontrado.</p>';
+            if (!productId) {
+                document.querySelector('.container').innerHTML = '<h1>Producto no encontrado</h1><p>El ID del producto no se encontró en la URL.</p>';
                 return;
             }
 
-            // 2. Renderizar la información básica del producto
+            // 1. Fetch product and seller info
+            const { data: product, error: productError } = await supabaseClient
+                .from('products')
+                .select('*, profiles(username)')
+                .eq('id', productId)
+                .single();
+
+            if (productError || !product) {
+                console.error('Error fetching product:', productError);
+                document.querySelector('.container').innerHTML = '<h1>Error</h1><p>No se pudo cargar el producto. Es posible que no exista o haya sido eliminado.</p>';
+                return;
+            }
+
+            // 2. Fetch product images
+            const { data: images, error: imageError } = await supabaseClient
+                .from('product_images')
+                .select('image_url')
+                .eq('product_id', productId);
+
+            // 3. Populate the page
             document.title = `${product.name} - Creative Engine Asset Store`;
             document.querySelector('.product-title').textContent = product.name;
-            document.querySelector('.product-author a').textContent = product.profiles.username || 'Desconocido';
-            document.querySelector('.product-price').textContent = product.price > 0 ? `\$${product.price.toFixed(2)}` : 'Gratis';
+            document.querySelector('.product-author a').textContent = (product.profiles ? product.profiles.username : 'Vendedor Desconocido') || 'Vendedor Desconocido';
+            document.querySelector('.product-price').textContent = product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`;
             document.querySelector('.product-description').innerHTML = `<h2>Descripción</h2><p>${product.description.replace(/\n/g, '<br>')}</p>`;
 
-            // --- Renderizar detalles de la licencia ---
-            const licenseDetailsContainer = document.getElementById('license-details');
-            licenseDetailsContainer.innerHTML = renderLicenseDetails(product);
-
-            // Renderizar estrellas de calificación promedio
-            const averageRatingEl = document.getElementById('product-average-rating');
-            averageRatingEl.innerHTML = renderStars(product.average_rating) + ` (${product.rating_count} reseña${product.rating_count === 1 ? '' : 's'})`;
-
-            // 3. Cargar media
-            const { data: images, error: imageError } = await supabaseClient.from('product_images').select('image_url').eq('product_id', productId);
             const mainMediaContainer = document.querySelector('.main-media');
             const thumbnailGallery = document.querySelector('.thumbnail-gallery');
-            thumbnailGallery.innerHTML = '';
+            thumbnailGallery.innerHTML = ''; // Clear placeholders
 
-            let mediaItems = (images || []).map(img => ({ type: 'image', url: img.image_url }));
-            if (product.youtube_url) mediaItems.unshift({ type: 'video', url: product.youtube_url });
+            let mediaItems = [];
+            if (images && images.length > 0) {
+                mediaItems = images.map(img => ({ type: 'image', url: img.image_url }));
+            }
+            if (product.youtube_url) {
+                mediaItems.unshift({ type: 'video', url: product.youtube_url });
+            }
 
             function displayMedia(media) {
-                if (media.type === 'image') mainMediaContainer.innerHTML = `<img src="${media.url}" alt="${product.name}">`;
-                else {
+                if (media.type === 'image') {
+                    mainMediaContainer.innerHTML = `<img src="${media.url}" alt="${product.name}">`;
+                } else if (media.type === 'video') {
                     const videoId = media.url.split('v=')[1]?.split('&')[0] || media.url.split('/').pop();
-                    mainMediaContainer.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+                    mainMediaContainer.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                 }
             }
 
             if (mediaItems.length > 0) {
                 displayMedia(mediaItems[0]);
+
                 mediaItems.forEach((media, index) => {
                     const thumb = document.createElement('img');
-                    thumb.className = 'thumbnail';
+                    thumb.classList.add('thumbnail');
                     if (index === 0) thumb.classList.add('active');
-                    if (media.type === 'image') thumb.src = media.url;
-                    else {
+
+                    if (media.type === 'image') {
+                        thumb.src = media.url;
+                    } else {
                         const videoId = media.url.split('v=')[1]?.split('&')[0] || media.url.split('/').pop();
                         thumb.src = `https://img.youtube.com/vi/${videoId}/0.jpg`;
                     }
-                    thumb.onclick = () => {
+
+                    thumb.addEventListener('click', () => {
                         displayMedia(media);
                         document.querySelectorAll('.thumbnail.active').forEach(t => t.classList.remove('active'));
                         thumb.classList.add('active');
-                    };
+                    });
                     thumbnailGallery.appendChild(thumb);
                 });
-            } else mainMediaContainer.innerHTML = `<img src="https://via.placeholder.com/560x315.png?text=No+Media" alt="No media available">`;
+            } else {
+                 mainMediaContainer.innerHTML = `<img src="https://via.placeholder.com/560x315.png?text=No+Media" alt="No media available">`;
+            }
 
-            // 4. Configurar botones de acción
-            const { data: { user } } = await supabaseClient.auth.getUser();
             const buyPointsBtn = document.querySelector('.btn-buy-points');
             const getFreeBtn = document.querySelector('.btn-get-free');
             const wishlistBtn = document.querySelector('.wishlist-btn-large');
@@ -1602,299 +1541,119 @@ if (window.location.pathname.includes('product.html')) {
                 buyPointsBtn.style.display = 'none';
                 getFreeBtn.style.display = 'inline-block';
             } else {
-                paypalContainer.style.display = 'block';
-                buyPointsBtn.style.display = 'inline-block';
-                getFreeBtn.style.display = 'none';
+                 paypalContainer.style.display = 'block';
+                 buyPointsBtn.style.display = 'inline-block';
+                 getFreeBtn.style.display = 'none';
             }
-
-            // 5. Lógica de calificaciones y comentarios
-            const reviewSection = document.getElementById('review-section');
-            if (session) {
-                const { data: ownership } = await supabaseClient.from('user_owned_assets').select('id').eq('user_id', user.id).eq('product_id', productId).maybeSingle();
-                if (ownership) {
-                    reviewSection.style.display = 'block';
-                    initializeReviewForm(productId, user);
-                } else {
-                    reviewSection.style.display = 'none';
-                }
-            } else {
-                reviewSection.style.display = 'none';
-            }
-
-            // 6. Cargar y mostrar los comentarios existentes
-            await loadComments(productId, session ? session.user : null);
-
-        } catch (error) {
-            console.error('Error cargando detalles del producto:', error);
-            document.querySelector('.container').innerHTML = `<p>Error al cargar el producto: ${error.message}</p>`;
         }
+        loadProductDetails();
     }
+});
 
-    loadProductDetails();
-}
+// --- Lógica para la página de búsqueda ---
+if (window.location.pathname.includes('search.html')) {
+    const searchResultsGrid = document.getElementById('search-results-grid');
+    const searchQuerySpan = document.getElementById('search-query');
+    const maxPriceSlider = document.getElementById('max-price-slider');
+    const maxPriceValue = document.getElementById('max-price-value');
+    const sortBySelect = document.getElementById('sort-by');
+    const applyFiltersBtn = document.getElementById('apply-filters-btn');
 
-// --- NUEVAS FUNCIONES PARA CALIFICACIONES Y COMENTARIOS ---
+    async function executeSearch() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryText = urlParams.get('query') || '';
+        const maxPrice = urlParams.get('price') || 200;
+        const [sortBy, sortOrder] = (urlParams.get('sort') || 'average_rating:desc').split(':');
 
-// Función para renderizar estrellas (visualización y formulario)
-function renderStars(rating) {
-    let starsHtml = '';
-    const fullStars = Math.round(rating); // Redondeamos para visualización simple
-    for (let i = 1; i <= 5; i++) {
-        starsHtml += `<span data-value="${i}">${i <= fullStars ? '★' : '☆'}</span>`;
-    }
-    return starsHtml;
-}
+        // Update UI elements to reflect current search
+        searchQuerySpan.textContent = queryText;
+        document.title = `Búsqueda: ${queryText} - Creative Engine Asset Store`;
+        maxPriceSlider.value = maxPrice;
+        maxPriceValue.textContent = `Hasta $${maxPrice}`;
+        sortBySelect.value = `${sortBy}:${sortOrder}`;
 
-function setupInteractiveStars(targetElement) {
-    targetElement.innerHTML = renderStars(0); // Empezar con 0 estrellas
-    const stars = targetElement.querySelectorAll('span');
-
-    const handleStarHover = (rating) => {
-        stars.forEach(star => {
-            star.textContent = parseInt(star.dataset.value) <= rating ? '★' : '☆';
-        });
-    };
-
-    stars.forEach(star => {
-        star.addEventListener('mouseover', () => handleStarHover(parseInt(star.dataset.value)));
-        star.addEventListener('mouseout', () => handleStarHover(parseInt(targetElement.dataset.rating || '0')));
-        star.addEventListener('click', () => {
-            const rating = parseInt(star.dataset.value);
-            targetElement.dataset.rating = rating; // Guardar la calificación seleccionada
-            handleStarHover(rating);
-        });
-    });
-}
-
-// Función para inicializar el formulario de reseña
-function initializeReviewForm(productId, user) {
-    const form = document.getElementById('review-form');
-    const starsContainer = document.getElementById('user-rating-stars');
-    const commentTypeSelector = document.querySelector('.comment-type-selector');
-    let selectedCommentType = null;
-
-    setupInteractiveStars(starsContainer);
-
-    commentTypeSelector.addEventListener('click', (e) => {
-        if (e.target.tagName === 'BUTTON') {
-            commentTypeSelector.querySelectorAll('.btn').forEach(btn => btn.classList.remove('selected'));
-            e.target.classList.add('selected');
-            selectedCommentType = e.target.dataset.type;
-        }
-    });
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const rating = parseInt(starsContainer.dataset.rating || '0');
-        const comment = document.getElementById('comment-text').value;
-
-        if (rating === 0 && !comment.trim()) {
-            alert("Por favor, selecciona una calificación o escribe un comentario.");
-            return;
-        }
-        if (comment.trim() && !selectedCommentType) {
-            alert("Por favor, selecciona si tu comentario es positivo o negativo.");
-            return;
-        }
+        searchResultsGrid.innerHTML = '<p>Buscando...</p>';
 
         try {
-            const { data, error } = await supabaseClient.functions.invoke('submit-review', {
-                body: {
-                    productId,
-                    rating: rating > 0 ? rating : null,
-                    comment: comment.trim() || null,
-                    commentType: selectedCommentType
-                }
-            });
+            let query = supabaseClient
+                .from('products_with_ratings')
+                .select('*')
+                .eq('status', 'approved')
+                .lte('price', maxPrice);
+
+            // Add full-text search if a query is present
+            if (queryText) {
+                query = query.textSearch('fts', queryText, {
+                    type: 'websearch'
+                });
+            }
+
+            // Apply sorting
+            const orderOptions = { ascending: sortOrder === 'asc' };
+             if (sortBy === 'average_rating') {
+                query = query.order('average_rating', orderOptions).order('rating_count', { ascending: false });
+            } else {
+                query = query.order(sortBy, orderOptions);
+            }
+
+            const { data: products, error } = await query;
 
             if (error) throw error;
-            if(data.error) throw new Error(data.error);
 
-            alert("¡Reseña enviada con éxito!");
-            location.reload();
+            if (!products || products.length === 0) {
+                searchResultsGrid.innerHTML = '<p>No se encontraron productos para tu búsqueda.</p>';
+                return;
+            }
 
+             const productPromises = products.map(async (product) => {
+                const { data: images, error: imageError } = await supabaseClient.from('product_images').select('image_url').eq('product_id', product.id).limit(1);
+                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
+                if (!imageError && images && images.length > 0) imageUrl = images[0].image_url;
+
+                const starsHTML = renderStars(product.average_rating);
+
+                return `
+                    <a href="product.html?id=${product.id}" class="asset-card">
+                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
+                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
+                        <div class="asset-info">
+                            <h3 class="asset-title">${product.name}</h3>
+                            <div class="asset-rating-summary">
+                                <span class="stars">${starsHTML}</span>
+                                <span class="rating-count">(${product.rating_count})</span>
+                            </div>
+                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
+                        </div>
+                    </a>
+                `;
+            });
+
+            const productHTML = await Promise.all(productPromises);
+            searchResultsGrid.innerHTML = productHTML.join('');
 
         } catch (error) {
-            console.error('Error al enviar la reseña:', error);
-            alert(`Error: ${error.message}`);
+            console.error('Error al realizar la búsqueda:', error);
+            searchResultsGrid.innerHTML = `<p class="error">Error al buscar productos: ${error.message}</p>`;
         }
+    }
+
+    // Event listener for the price slider
+    maxPriceSlider.addEventListener('input', () => {
+        maxPriceValue.textContent = `Hasta $${maxPriceSlider.value}`;
     });
+
+    // Event listener for the apply filters button
+    applyFiltersBtn.addEventListener('click', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const newSort = sortBySelect.value;
+        const newPrice = maxPriceSlider.value;
+
+        urlParams.set('sort', newSort);
+        urlParams.set('price', newPrice);
+
+        window.location.search = urlParams.toString();
+    });
+
+    // Initial search execution
+    executeSearch();
 }
-
-// Función para cargar y mostrar los comentarios
-async function loadComments(productId, user) {
-    const commentsList = document.getElementById('comments-list');
-    commentsList.innerHTML = '<p>Cargando comentarios...</p>';
-
-    try {
-        // 1. Obtener los comentarios desde la nueva vista
-        const { data: comments, error: commentsError } = await supabaseClient
-            .from('comments_with_details')
-            .select('*')
-            .eq('product_id', productId)
-            .order('created_at', { ascending: false });
-
-        if (commentsError) throw commentsError;
-
-        if (comments.length === 0) {
-            commentsList.innerHTML = '<p>Todavía no hay comentarios. ¡Sé el primero!</p>';
-            return;
-        }
-
-        // 2. Si el usuario está logueado, obtener sus votos para marcar los botones correctos
-        let userVotes = new Map();
-        if (user) {
-            const commentIds = comments.map(c => c.id);
-            const { data: votesData, error: votesError } = await supabaseClient
-                .from('comment_votes')
-                .select('comment_id, vote_type')
-                .in('comment_id', commentIds)
-                .eq('user_id', user.id);
-
-            if (votesError) console.warn("No se pudieron cargar los votos del usuario:", votesError);
-            else votesData.forEach(vote => userVotes.set(vote.comment_id, vote.vote_type));
-        }
-
-        // 3. Renderizar el HTML
-        const commentsHtml = comments.map(comment => {
-            const userVote = userVotes.get(comment.id);
-            return `
-                <div class="comment-card ${comment.comment_type}">
-                    <div class="comment-header">
-                        <span class="comment-author">${comment.author_username || 'Anónimo'}</span>
-                        <span class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <p class="comment-body">${comment.content}</p>
-                    <div class="comment-actions" data-comment-id="${comment.id}">
-                        <button class="vote-btn ${userVote === 'upvote' ? 'active' : ''}" data-vote-type="upvote">👍 <span>${comment.upvotes}</span></button>
-                        <button class="vote-btn ${userVote === 'downvote' ? 'active' : ''}" data-vote-type="downvote">👎 <span>${comment.downvotes}</span></button>
-                        <button class="vote-btn ${userVote === 'support' ? 'active' : ''}" data-vote-type="support">🤝 <span>${comment.supports}</span> Apoyo</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        commentsList.innerHTML = commentsHtml;
-
-    } catch (error) {
-        console.error('Error al cargar comentarios:', error);
-        commentsList.innerHTML = `<p>Error al cargar comentarios: ${error.message}</p>`;
-    }
-}
-
-// Listener para votos en comentarios (delegado)
-document.addEventListener('click', async (e) => {
-    const voteButton = e.target.closest('.vote-btn');
-    if (!voteButton || !window.location.pathname.includes('product.html')) return;
-
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
-        alert("Debes iniciar sesión para votar.");
-        return;
-    }
-
-    const commentId = voteButton.parentElement.dataset.commentId;
-    const voteType = voteButton.dataset.voteType;
-
-    try {
-        const { error } = await supabaseClient.functions.invoke('vote-comment', {
-            body: { commentId, voteType }
-        });
-        if (error) throw error;
-
-        // Recargar todo para actualizar los votos
-        location.reload();
-    } catch (error) {
-        console.error('Error al votar:', error);
-        alert(`Error: ${error.message}`);
-    }
-});
-
-// --- Nueva Función para Renderizar Detalles de la Licencia ---
-function renderLicenseDetails(product) {
-    let licenseHTML = '';
-    const licenseType = product.license_type;
-
-    switch (licenseType) {
-        case 'standard_paid':
-            licenseHTML = `
-                <h4>De Pago (Uso Comercial Ilimitado)</h4>
-                <p>Puedes usar este asset en un número ilimitado de proyectos comerciales. No se requiere atribución al autor original.</p>
-            `;
-            break;
-        case 'exclusive':
-            licenseHTML = `
-                <h4>Exclusiva (Venta Única)</h4>
-                <p>Al comprar este producto, adquieres los derechos exclusivos. Será retirado de la tienda permanentemente. Puedes usarlo, modificarlo y distribuirlo en cualquier proyecto sin restricciones.</p>
-            `;
-            break;
-        case 'free_educational':
-            licenseHTML = `
-                <h4>Gratuita (Uso Educativo)</h4>
-                <p>Puedes usar este asset libremente en proyectos personales y educativos. No está permitido su uso en proyectos comerciales ni su redistribución sin el permiso explícito del creador.</p>
-            `;
-            break;
-        case 'free_commercial':
-            licenseHTML = `
-                <h4>Gratuita (Uso Comercial con Atribución)</h4>
-                <p>Puedes usar este asset en proyectos comerciales y personales, pero debes dar crédito (atribución) al autor original del producto.</p>
-            `;
-            break;
-        case 'custom':
-            licenseHTML = `
-                <h4>Personalizada</h4>
-                <p>Esta licencia tiene términos especiales definidos por el vendedor.</p>
-                <h5>Derechos del Vendedor:</h5>
-                <p>${product.custom_license_seller_rights || 'No especificados.'}</p>
-                <h5>Derechos del Comprador:</h5>
-                <p>${product.custom_license_buyer_rights || 'No especificados.'}</p>
-            `;
-            break;
-        default:
-            licenseHTML = '<p>Licencia no especificada.</p>';
-            break;
-    }
-    return licenseHTML;
-}
-
-// --- Nueva Lógica para Descargar la Licencia ---
-document.body.addEventListener('click', async (e) => {
-    const button = e.target.closest('.download-license-btn');
-    if (!button) return;
-
-    const licensePath = button.dataset.licensePath;
-    if (!licensePath) {
-        alert('Error: No se encontró la ruta de la licencia.');
-        return;
-    }
-
-    const originalText = button.textContent;
-    button.disabled = true;
-    button.textContent = 'Generando...';
-
-    try {
-        const { data, error } = await supabaseClient.functions.invoke('create-license-download-link', {
-            body: { licensePath },
-        });
-
-        if (error) throw new Error(`Error de la función: ${error.message}`);
-        if (data.error) throw new Error(data.error);
-        if (!data.signedUrl) throw new Error("No se recibió un enlace de descarga válido.");
-
-        // Iniciar la descarga
-        const link = document.createElement('a');
-        link.href = data.signedUrl;
-        link.download = 'licencia.txt'; // Nombre del archivo que verá el usuario
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-    } catch (err) {
-        console.error('Error al descargar la licencia:', err);
-        alert(`No se pudo generar el enlace de descarga: ${err.message}`);
-    } finally {
-        button.disabled = false;
-        button.textContent = originalText;
-    }
-});
-
-});
