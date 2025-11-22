@@ -466,6 +466,31 @@ a {
     grid-template-columns: 2fr 1fr;
     gap: 40px;
     margin-top: 2rem;
+    /* Permitimos que el layout se expanda para incluir las nuevas filas de comentarios */
+    grid-template-areas:
+        "media info"
+        "feedback feedback";
+    grid-template-rows: auto 1fr;
+}
+
+.product-media {
+    grid-area: media;
+}
+
+.product-info-panel {
+    grid-area: info;
+}
+
+.product-feedback-grid {
+    grid-area: feedback;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    margin-top: 2rem;
+}
+
+.product-feedback-section h3 {
+    margin-top: 0;
 }
 
 .product-media .main-media {

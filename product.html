@@ -56,34 +56,43 @@
         </div>
 
         <!-- Sección de Comentarios y Calificaciones -->
-        <div class="product-feedback-section">
+        <div id="feedback-section" class="product-feedback-section">
             <h2>Calificaciones y Comentarios</h2>
 
-            <!-- Formulario para dejar un nuevo comentario -->
-            <div id="comments-section">
-                <h3>Comentarios</h3>
-                <form id="comment-form" class="comment-form">
-                    <div class="comment-type-selector">
-                        <label>Tipo de Comentario:</label>
-                        <input type="radio" id="comment-type-positive" name="comment_type" value="positive" checked>
-                        <label for="comment-type-positive">Positivo</label>
-                        <input type="radio" id="comment-type-negative" name="comment_type" value="negative">
-                        <label for="comment-type-negative">Negativo</label>
+            <div class="product-feedback-grid">
+                <!-- Columna Izquierda: Lista de Comentarios -->
+                <div class="feedback-comments-column">
+                    <div id="comments-section">
+                        <h3>Comentarios</h3>
+                        <ul id="comments-list" class="comments-list">
+                            <!-- Los comentarios se cargarán aquí con JS -->
+                        </ul>
                     </div>
-                    <textarea id="comment-body" placeholder="Escribe tu comentario aquí..."></textarea>
-                    <div class="comment-form-footer">
-                         <!-- Aquí se mostrarán las estrellas para calificar -->
-                        <div class="rating-input" id="rating-input">
-                            <!-- Estrellas generadas por JS -->
-                        </div>
-                        <button type="submit" class="btn btn-primary">Publicar Comentario</button>
-                    </div>
-                </form>
+                </div>
 
-                <!-- Lista de comentarios existentes -->
-                <ul id="comments-list" class="comments-list">
-                    <!-- Los comentarios se cargarán aquí con JS -->
-                </ul>
+                <!-- Columna Derecha: Formulario para Nueva Reseña -->
+                <div class="feedback-form-column">
+                    <div id="comment-form-section">
+                        <h3>Deja tu reseña</h3>
+                        <!-- El JS gestiona la visibilidad de este formulario -->
+                        <form id="comment-form" class="comment-form" style="display: none;">
+                            <div class="comment-type-selector">
+                                <label>Tipo de Comentario:</label>
+                                <input type="radio" id="comment-type-positive" name="comment_type" value="positive" checked>
+                                <label for="comment-type-positive">Positivo</label>
+                                <input type="radio" id="comment-type-negative" name="comment_type" value="negative">
+                                <label for="comment-type-negative">Negativo</label>
+                            </div>
+                            <textarea id="comment-body" placeholder="Escribe tu comentario aquí..."></textarea>
+                            <div class="comment-form-footer">
+                                <div class="rating-input" id="rating-input">
+                                    <!-- Estrellas generadas por JS -->
+                                </div>
+                                <button type="submit" class="btn btn-primary">Publicar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </main>

@@ -60,20 +60,4 @@ Se ha añadido un sistema completo que permite a los usuarios interactuar con lo
 
 ---
 
-## 4. Acción Requerida: Arreglar Visualización de Estrellas (Permisos RLS)
-
-Para que el sistema de calificaciones y estrellas funcione correctamente, es **indispensable** aplicar una política de seguridad (RLS) en tu base de datos de Supabase. Sin este paso, las estrellas no se mostrarán.
-
-### Tarea: Ejecutar el Script SQL para Permisos
-
-1.  **Vaya a su panel de Supabase.**
-2.  **En el menú de la izquierda, haz clic en "SQL Editor".**
-3.  **Haga clic en "+ New query".**
-4.  **Copie el contenido del archivo `sql/fix_ratings_rls.sql` que he creado en el repositorio.**
-5.  **Pegue el contenido en el editor de SQL.**
-6.  **Haga clic en el botón "RUN".**
-
-Después de ejecutar este script, las estrellas y los conteos de calificaciones deberían aparecer inmediatamente en toda la tienda.
-
----
 ¡Gracias por la oportunidad de trabajar en su proyecto!

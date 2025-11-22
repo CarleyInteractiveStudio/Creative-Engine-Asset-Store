@@ -637,15 +637,15 @@ if (window.location.pathname.includes('admin.html')) {
             const productIds = products.map(p => p.id);
             const { data: ratings, error: ratingsError } = await supabaseClient
                 .from('products_with_ratings')
-                .select('product_id, average_rating, rating_count')
-                .in('product_id', productIds);
+                .select('id, average_rating, rating_count')
+                .in('id', productIds);
 
             if (ratingsError) {
                 console.warn("No se pudieron cargar los ratings de los productos. Mostrando sin ellos.", ratingsError);
             } else {
                 // Inyectar los datos de rating en los objetos de producto
                 products.forEach(product => {
-                    const ratingData = ratings.find(r => r.product_id === product.id);
+                    const ratingData = ratings.find(r => r.id === product.id);
                     if (ratingData) {
                         product.average_rating = ratingData.average_rating;
                         product.rating_count = ratingData.rating_count;
@@ -786,14 +786,14 @@ if (window.location.pathname.includes('admin.html')) {
             const productIds = products.map(p => p.id);
             const { data: ratings, error: ratingsError } = await supabaseClient
                 .from('products_with_ratings')
-                .select('product_id, average_rating, rating_count')
-                .in('product_id', productIds);
+                .select('id, average_rating, rating_count')
+                .in('id', productIds);
 
             if (ratingsError) {
                 console.warn("No se pudieron cargar los ratings de los productos de la categoría. Mostrando sin ellos.", ratingsError);
             } else {
                 products.forEach(product => {
-                    const ratingData = ratings.find(r => r.product_id === product.id);
+                    const ratingData = ratings.find(r => r.id === product.id);
                     if (ratingData) {
                         product.average_rating = ratingData.average_rating;
                         product.rating_count = ratingData.rating_count;
@@ -1528,7 +1528,7 @@ if (window.location.pathname.includes('admin.html')) {
             const { data: ratingData, error: ratingError } = await supabaseClient
                 .from('products_with_ratings')
                 .select('average_rating, rating_count')
-                .eq('product_id', productId)
+                .eq('id', productId)
                 .single();
 
             if (ratingError) {
