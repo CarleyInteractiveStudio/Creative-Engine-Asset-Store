@@ -38,7 +38,6 @@
             <div class="product-info-panel">
                 <h1 class="product-title">Cargando...</h1>
                 <div class="product-author">por <a href="#">...</a></div>
-                <div class="product-rating" id="product-rating-summary"></div> <!-- Contenedor para las estrellas -->
                 <div class="product-price">...</div>
                 <div class="product-actions">
                     <div id="paypal-button-container"></div>
@@ -51,47 +50,6 @@
                 </div>
                 <div class="product-license">
                     <h2>Licencia</h2>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sección de Comentarios y Calificaciones -->
-        <div id="feedback-section" class="product-feedback-section">
-            <h2>Calificaciones y Comentarios</h2>
-
-            <div class="product-feedback-grid">
-                <!-- Columna Izquierda: Lista de Comentarios -->
-                <div class="feedback-comments-column">
-                    <div id="comments-section">
-                        <h3>Comentarios</h3>
-                        <ul id="comments-list" class="comments-list">
-                            <!-- Los comentarios se cargarán aquí con JS -->
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Columna Derecha: Formulario para Nueva Reseña -->
-                <div class="feedback-form-column">
-                    <div id="comment-form-section">
-                        <h3>Deja tu reseña</h3>
-                        <!-- El JS gestiona la visibilidad de este formulario -->
-                        <form id="comment-form" class="comment-form" style="display: none;">
-                            <div class="comment-type-selector">
-                                <label>Tipo de Comentario:</label>
-                                <input type="radio" id="comment-type-positive" name="comment_type" value="positive" checked>
-                                <label for="comment-type-positive">Positivo</label>
-                                <input type="radio" id="comment-type-negative" name="comment_type" value="negative">
-                                <label for="comment-type-negative">Negativo</label>
-                            </div>
-                            <textarea id="comment-body" placeholder="Escribe tu comentario aquí..."></textarea>
-                            <div class="comment-form-footer">
-                                <div class="rating-input" id="rating-input">
-                                    <!-- Estrellas generadas por JS -->
-                                </div>
-                                <button type="submit" class="btn btn-primary">Publicar</button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>

@@ -49,144 +49,6 @@ a {
     color: var(--secondary-color);
 }
 
-/* --- Sección de Comentarios y Votación --- */
-.product-feedback-section {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--grey-color);
-}
-
-.product-feedback-section h2 {
-    font-size: 1.8rem;
-    margin-bottom: 2rem;
-}
-
-.comment-form {
-    background-color: var(--white-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
-}
-
-.comment-type-selector {
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.comment-type-selector label {
-    font-weight: bold;
-}
-
-.comment-form textarea {
-    width: 100%;
-    min-height: 100px;
-    padding: 10px;
-    border-radius: 5px;
-    border: 1px solid var(--grey-color);
-    box-sizing: border-box;
-    font-family: inherit;
-    margin-bottom: 1rem;
-}
-
-.comment-form-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.rating-input input {
-    display: none;
-}
-
-.rating-input label {
-    cursor: pointer;
-    font-size: 2rem;
-    color: var(--grey-color);
-    transition: color 0.2s;
-}
-
-.rating-input {
-    direction: rtl; /* Para que las estrellas se seleccionen de derecha a izquierda */
-    display: inline-block;
-}
-
-.rating-input input:checked ~ label,
-.rating-input label:hover,
-.rating-input label:hover ~ label {
-    color: var(--primary-color);
-}
-
-
-.comments-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.comment {
-    background-color: var(--white-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    border-left: 5px solid var(--grey-color);
-}
-
-.comment.positive {
-    border-left-color: var(--primary-color);
-    background-color: #fffaf0; /* Un fondo ligeramente amarillo */
-}
-
-.comment.negative {
-    border-left-color: var(--secondary-color);
-}
-
-.comment-author {
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-}
-
-.comment-body p {
-    margin: 0;
-    line-height: 1.6;
-}
-
-.comment-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    color: #777;
-    font-size: 0.9rem;
-}
-
-.comment-votes {
-    display: flex;
-    gap: 10px;
-}
-
-.comment-vote-btn {
-    background: none;
-    border: 1px solid var(--grey-color);
-    border-radius: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.comment-vote-btn:hover {
-    background-color: var(--background-color);
-    border-color: var(--primary-color);
-}
-
-.auth-notice {
-    font-style: italic;
-    color: #555;
-}
-
 .dashboard-product-thumbnail {
     width: 100px;
     height: 75px;
@@ -400,6 +262,13 @@ a {
     color: var(--primary-color);
 }
 
+.asset-card .asset-rating-summary {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+}
+
 .wishlist-btn {
     position: absolute;
     top: 10px;
@@ -466,31 +335,6 @@ a {
     grid-template-columns: 2fr 1fr;
     gap: 40px;
     margin-top: 2rem;
-    /* Permitimos que el layout se expanda para incluir las nuevas filas de comentarios */
-    grid-template-areas:
-        "media info"
-        "feedback feedback";
-    grid-template-rows: auto 1fr;
-}
-
-.product-media {
-    grid-area: media;
-}
-
-.product-info-panel {
-    grid-area: info;
-}
-
-.product-feedback-grid {
-    grid-area: feedback;
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 40px;
-    margin-top: 2rem;
-}
-
-.product-feedback-section h3 {
-    margin-top: 0;
 }
 
 .product-media .main-media {
@@ -545,6 +389,13 @@ a {
 .product-info-panel .product-author a {
     color: var(--primary-color);
     font-weight: bold;
+}
+
+/* --- Estilos para Calificaciones (Estrellas) --- */
+.product-rating {
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
 }
 
 .product-info-panel .product-price {

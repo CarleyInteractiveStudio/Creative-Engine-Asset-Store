@@ -616,44 +616,41 @@ if (window.location.pathname.includes('admin.html')) {
     const featuredAssetGrid = document.querySelector('#featured .asset-grid');
     if (featuredAssetGrid) {
         async function loadFeaturedProducts() {
+            // 1. Cargar los productos base
             const { data: products, error } = await supabaseClient
                 .from('products')
                 .select('*')
                 .eq('status', 'approved')
-                .order('created_at', { ascending: false })
                 .limit(4);
 
             if (error) {
                 console.error('Error cargando productos destacados:', error);
+                featuredAssetGrid.innerHTML = '<p class="error">No se pudieron cargar los productos.</p>';
                 return;
             }
-
             if (!products || products.length === 0) {
                 featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
                 return;
             }
 
-            // --- Carga de Ratings (separada y tolerante a fallos) ---
+            // 2. Cargar los ratings (incluyendo la suma de estrellas)
             const productIds = products.map(p => p.id);
             const { data: ratings, error: ratingsError } = await supabaseClient
                 .from('products_with_ratings')
-                .select('id, average_rating, rating_count')
+                .select('id, total_stars')
                 .in('id', productIds);
 
             if (ratingsError) {
-                console.warn("No se pudieron cargar los ratings de los productos. Mostrando sin ellos.", ratingsError);
+                console.warn("No se pudieron cargar los ratings. Mostrando productos sin ellos.", ratingsError);
             } else {
                 // Inyectar los datos de rating en los objetos de producto
                 products.forEach(product => {
                     const ratingData = ratings.find(r => r.id === product.id);
-                    if (ratingData) {
-                        product.average_rating = ratingData.average_rating;
-                        product.rating_count = ratingData.rating_count;
-                    }
+                    product.total_stars = ratingData ? ratingData.total_stars : 0;
                 });
             }
-            // --- Fin de la carga de Ratings ---
 
+            // 3. Renderizar los productos con la información combinada
             const productPromises = products.map(async (product) => {
                 const { data: images, error: imageError } = await supabaseClient
                     .from('product_images')
@@ -662,13 +659,14 @@ if (window.location.pathname.includes('admin.html')) {
                     .limit(1);
 
                 let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (imageError) {
-                    console.error(`Error fetching image for product ${product.id}:`, imageError);
-                } else if (images && images.length > 0) {
+                if (!imageError && images && images.length > 0) {
                     imageUrl = images[0].image_url;
                 }
 
-                const starCountHTML = renderStarCount(product.rating_count);
+                // Mostrar la suma de estrellas si es mayor que cero
+                const starDisplay = product.total_stars > 0
+                    ? `<div class="asset-rating-summary">★ ${product.total_stars}</div>`
+                    : '';
 
                 return `
                     <a href="product.html?id=${product.id}" class="asset-card">
@@ -676,7 +674,7 @@ if (window.location.pathname.includes('admin.html')) {
                         <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                            <div class="asset-rating-summary">${starCountHTML}</div>
+                            ${starDisplay}
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </a>
@@ -774,33 +772,29 @@ if (window.location.pathname.includes('admin.html')) {
 
             if (error) {
                 console.error('Error cargando productos de categoría:', error);
+                categoryAssetGrid.innerHTML = '<p class="error">No se pudieron cargar los productos.</p>';
                 return;
             }
-
             if (!products || products.length === 0) {
                 categoryAssetGrid.innerHTML = '<p>No hay productos en esta categoría.</p>';
                 return;
             }
 
-            // --- Carga de Ratings (separada y tolerante a fallos) ---
+            // Cargar los ratings (incluyendo la suma de estrellas)
             const productIds = products.map(p => p.id);
             const { data: ratings, error: ratingsError } = await supabaseClient
                 .from('products_with_ratings')
-                .select('id, average_rating, rating_count')
+                .select('id, total_stars')
                 .in('id', productIds);
 
             if (ratingsError) {
-                console.warn("No se pudieron cargar los ratings de los productos de la categoría. Mostrando sin ellos.", ratingsError);
+                console.warn("No se pudieron cargar los ratings. Mostrando productos sin ellos.", ratingsError);
             } else {
                 products.forEach(product => {
                     const ratingData = ratings.find(r => r.id === product.id);
-                    if (ratingData) {
-                        product.average_rating = ratingData.average_rating;
-                        product.rating_count = ratingData.rating_count;
-                    }
+                    product.total_stars = ratingData ? ratingData.total_stars : 0;
                 });
             }
-            // --- Fin de la carga de Ratings ---
 
             const productPromises = products.map(async (product) => {
                 const { data: images, error: imageError } = await supabaseClient
@@ -810,13 +804,13 @@ if (window.location.pathname.includes('admin.html')) {
                     .limit(1);
 
                 let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (imageError) {
-                    console.error(`Error fetching image for product ${product.id}:`, imageError);
-                } else if (images && images.length > 0) {
+                if (!imageError && images && images.length > 0) {
                     imageUrl = images[0].image_url;
                 }
 
-                const starCountHTML = renderStarCount(product.rating_count);
+                const starDisplay = product.total_stars > 0
+                    ? `<div class="asset-rating-summary">★ ${product.total_stars}</div>`
+                    : '';
 
                 return `
                     <a href="product.html?id=${product.id}" class="asset-card">
@@ -824,7 +818,7 @@ if (window.location.pathname.includes('admin.html')) {
                         <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
-                             <div class="asset-rating-summary">${starCountHTML}</div>
+                            ${starDisplay}
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </a>
@@ -1523,22 +1517,6 @@ if (window.location.pathname.includes('admin.html')) {
             document.querySelector('.product-title').textContent = product.name;
             document.querySelector('.product-author a').textContent = (product.profiles ? product.profiles.username : 'Vendedor Desconocido') || 'Vendedor Desconocido';
             document.querySelector('.product-price').textContent = product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`;
-
-            // --- Carga de Rating (separada y tolerante a fallos) ---
-            const { data: ratingData, error: ratingError } = await supabaseClient
-                .from('products_with_ratings')
-                .select('average_rating, rating_count')
-                .eq('id', productId)
-                .single();
-
-            if (ratingError) {
-                console.warn(`No se pudo cargar el rating para el producto ${productId}.`, ratingError);
-            } else if (ratingData && ratingData.rating_count > 0) {
-                const ratingSummaryEl = document.getElementById('product-rating-summary');
-                const starsHTML = renderStars(ratingData.average_rating);
-                ratingSummaryEl.innerHTML = `<span class="stars">${starsHTML}</span> (${ratingData.rating_count} ${ratingData.rating_count === 1 ? 'voto' : 'votos'})`;
-            }
-            // --- Fin de la carga de Rating ---
             document.querySelector('.product-description').innerHTML = `<h2>Descripción</h2><p>${product.description.replace(/\n/g, '<br>')}</p>`;
 
             const mainMediaContainer = document.querySelector('.main-media');
@@ -1609,249 +1587,7 @@ if (window.location.pathname.includes('admin.html')) {
                  buyPointsBtn.style.display = 'inline-block';
                  getFreeBtn.style.display = 'none';
             }
-
-            // Cargar comentarios y configurar formulario
-            await loadProductComments(productId);
-            await configureCommentForm(productId);
         }
-
-        // --- Lógica de Comentarios y Votación ---
-
-        async function configureCommentForm(productId) {
-            const commentForm = document.getElementById('comment-form');
-            if (!commentForm) return;
-
-            const { data: { user } } = await supabaseClient.auth.getUser();
-
-            if (!user) {
-                // Deshabilitar para usuarios no logueados
-                commentForm.querySelector('textarea').disabled = true;
-                commentForm.querySelector('button').disabled = true;
-                const ratingInput = document.getElementById('rating-input');
-                if(ratingInput) ratingInput.innerHTML = '<p class="auth-notice">Debes <a href="login.html">iniciar sesión</a> y poseer este producto para calificarlo.</p>';
-                return;
-            }
-
-            // Comprobar si el usuario posee el asset
-            const { data: ownedAsset, error } = await supabaseClient
-                .from('user_owned_assets')
-                .select('id')
-                .eq('user_id', user.id)
-                .eq('product_id', productId)
-                .maybeSingle();
-
-            if (error) {
-                console.error("Error checking asset ownership:", error);
-                return;
-            }
-
-            if (!ownedAsset) {
-                // Si no es propietario, oculta el formulario y muestra un mensaje.
-                commentForm.style.display = 'none';
-                const notice = document.createElement('p');
-                notice.className = 'auth-notice';
-                notice.innerHTML = 'Debes poseer este producto para poder calificarlo.';
-                // Insertar el mensaje después del formulario (o en un contenedor específico si existe)
-                commentForm.parentNode.insertBefore(notice, commentForm.nextSibling);
-
-            } else {
-                // Si es propietario, asegúrate de que el formulario esté visible y renderiza las estrellas.
-                commentForm.style.display = 'block';
-                const ratingInput = document.getElementById('rating-input');
-                if (ratingInput) {
-                    let starsHTML = '';
-                    for (let i = 5; i >= 1; i--) {
-                        starsHTML += `<input type="radio" id="star${i}" name="rating" value="${i}" /><label for="star${i}">★</label>`;
-                    }
-                    ratingInput.innerHTML = starsHTML;
-                }
-            }
-        }
-
-        async function loadProductComments(productId) {
-            const commentsContainer = document.getElementById('comments-section');
-            if (!commentsContainer) return;
-
-            const commentsList = document.getElementById('comments-list');
-            if(!commentsList) return;
-
-            const { data: comments, error } = await supabaseClient
-                .from('comments_with_details') // Usamos la vista
-                .select('*')
-                .eq('product_id', productId)
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('Error loading comments:', error);
-                commentsList.innerHTML = '<p class="error">No se pudieron cargar los comentarios.</p>';
-                return;
-            }
-
-            renderComments(comments);
-        }
-
-        function renderComments(comments) {
-            const commentsList = document.getElementById('comments-list');
-            if (!commentsList) return;
-
-            if (!comments || comments.length === 0) {
-                commentsList.innerHTML = '<li><p>Todavía no hay comentarios. ¡Sé el primero!</p></li>';
-                return;
-            }
-
-            const commentHTML = comments.map(comment => `
-                <li class="comment ${comment.comment_type || ''}" data-comment-id="${comment.id}">
-                    <div class="comment-author">${comment.author_username || 'Anónimo'}</div>
-                    <div class="comment-body"><p>${(comment.content || '').replace(/\n/g, '<br>')}</p></div>
-                    <div class="comment-footer">
-                        <div class="comment-votes">
-                            <button class="comment-vote-btn" data-vote-type="upvote" title="Útil">
-                                👍 <span class="upvote-count">${comment.upvotes || 0}</span>
-                            </button>
-                            <button class="comment-vote-btn" data-vote-type="downvote" title="No útil">
-                                👎 <span class="downvote-count">${comment.downvotes || 0}</span>
-                            </button>
-                            <button class="comment-vote-btn" data-vote-type="support" title="¡Gracias!">
-                                ❤️ <span class="support-count">${comment.supports || 0}</span>
-                            </button>
-                        </div>
-                        <div class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</div>
-                    </div>
-                </li>
-            `).join('');
-
-            commentsList.innerHTML = commentHTML;
-        }
-
-        const commentForm = document.getElementById('comment-form');
-        if (commentForm) {
-            commentForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                if (!user) {
-                    alert('Debes iniciar sesión para calificar.');
-                    return;
-                }
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const productId = urlParams.get('id');
-                const comment = document.getElementById('comment-body').value;
-                const ratingInput = document.querySelector('input[name="rating"]:checked');
-                const rating = ratingInput ? parseInt(ratingInput.value) : null;
-                const commentTypeInput = document.querySelector('input[name="comment_type"]:checked');
-                const commentType = commentTypeInput ? commentTypeInput.value : 'positive'; // Default a 'positive'
-
-                if (!rating && !comment.trim()) {
-                    alert('Debes seleccionar una calificación o escribir un comentario para publicar.');
-                    return;
-                }
-
-                try {
-                    const { data, error } = await supabaseClient.functions.invoke('submit-review', {
-                        body: {
-                            productId,
-                            rating,
-                            comment,
-                            commentType,
-                        },
-                    });
-
-                    if (error) throw error;
-                    if (data.error) throw new Error(data.error);
-
-                    alert('¡Gracias por tu reseña!');
-
-                    // Limpiar y recargar para mostrar los cambios
-                    document.getElementById('comment-body').value = '';
-                    if (ratingInput) ratingInput.checked = false;
-                    loadProductDetails();
-
-                } catch (error) {
-                    console.error("Error submitting review via Edge Function:", error);
-                    alert('Error al publicar tu reseña: ' + error.message);
-                }
-            });
-        }
-
-        const commentsList = document.getElementById('comments-list');
-        if (commentsList) {
-            commentsList.addEventListener('click', async (e) => {
-                const voteButton = e.target.closest('.comment-vote-btn');
-                if (!voteButton) return;
-
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                if (!user) {
-                    alert('Debes iniciar sesión para votar.');
-                    return;
-                }
-
-                const commentLi = voteButton.closest('.comment');
-                const commentId = commentLi.dataset.commentId;
-                const voteType = voteButton.dataset.voteType;
-
-                voteButton.disabled = true;
-
-                try {
-                    const { data, error } = await supabaseClient.functions.invoke('vote-comment', {
-                        body: { commentId: commentId, voteType },
-                    });
-
-                    if (error) throw error;
-                    if (data.error) throw new Error(data.error);
-
-                    if (data.newCounts) {
-                        const upvoteSpan = commentLi.querySelector('.upvote-count');
-                        const downvoteSpan = commentLi.querySelector('.downvote-count');
-                        const supportSpan = commentLi.querySelector('.support-count');
-
-                        if(upvoteSpan) upvoteSpan.textContent = data.newCounts.upvotes || 0;
-                        if(downvoteSpan) downvoteSpan.textContent = data.newCounts.downvotes || 0;
-                        if(supportSpan) supportSpan.textContent = data.newCounts.supports || 0;
-                    }
-
-                } catch (err) {
-                    alert(`Error al procesar el voto: ${err.message}`);
-                    console.error(err);
-                } finally {
-                    voteButton.disabled = false;
-                }
-            });
-        }
-
         loadProductDetails();
     }
 });
-
-// --- Funciones de Ayuda ---
-
-/**
- * Renderiza la calificación promedio como una serie de 5 estrellas.
- * @param {number} averageRating - La calificación promedio (ej. 4.5).
- * @returns {string} El HTML para las 5 estrellas.
- */
-function renderStars(averageRating) {
-    const rating = Math.round(averageRating * 2) / 2; // Redondear al 0.5 más cercano
-    let html = '';
-    for (let i = 1; i <= 5; i++) {
-        if (rating >= i) {
-            html += '★'; // Estrella llena
-        } else if (rating === i - 0.5) {
-            html += '◐'; // Media estrella (requiere un buen font)
-        } else {
-            html += '☆'; // Estrella vacía
-        }
-    }
-    return html;
-}
-
-/**
- * Renderiza una sola estrella seguida del número total de calificaciones.
- * @param {number} ratingCount - El número total de calificaciones.
- * @returns {string} El HTML para el contador de estrellas.
- */
-function renderStarCount(ratingCount) {
-    if (ratingCount > 0) {
-        return `★ ${ratingCount}`;
-    }
-    return ''; // No mostrar nada si no hay calificaciones
-}
