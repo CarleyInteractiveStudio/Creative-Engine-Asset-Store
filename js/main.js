@@ -1646,13 +1646,17 @@ if (window.location.pathname.includes('admin.html')) {
             }
 
             if (!ownedAsset) {
-                // Deshabilitar si el usuario no posee el asset
-                 commentForm.querySelector('textarea').disabled = true;
-                 commentForm.querySelector('button').disabled = true;
-                 const ratingInput = document.getElementById('rating-input');
-                 if(ratingInput) ratingInput.innerHTML = '<p class="auth-notice">Debes poseer este producto para poder calificarlo.</p>';
+                // Si no es propietario, oculta el formulario y muestra un mensaje.
+                commentForm.style.display = 'none';
+                const notice = document.createElement('p');
+                notice.className = 'auth-notice';
+                notice.innerHTML = 'Debes poseer este producto para poder calificarlo.';
+                // Insertar el mensaje después del formulario (o en un contenedor específico si existe)
+                commentForm.parentNode.insertBefore(notice, commentForm.nextSibling);
+
             } else {
-                // Habilitar el formulario y renderizar las estrellas para calificar
+                // Si es propietario, asegúrate de que el formulario esté visible y renderiza las estrellas.
+                commentForm.style.display = 'block';
                 const ratingInput = document.getElementById('rating-input');
                 if (ratingInput) {
                     let starsHTML = '';
