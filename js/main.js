@@ -620,6 +620,7 @@ if (window.location.pathname.includes('admin.html')) {
                 .from('products')
                 .select('*')
                 .eq('status', 'approved')
+                .order('created_at', { ascending: false })
                 .limit(4);
 
             if (error) {
@@ -631,6 +632,27 @@ if (window.location.pathname.includes('admin.html')) {
                 featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
                 return;
             }
+
+            // --- Carga de Ratings (separada y tolerante a fallos) ---
+            const productIds = products.map(p => p.id);
+            const { data: ratings, error: ratingsError } = await supabaseClient
+                .from('products_with_ratings')
+                .select('product_id, average_rating, rating_count')
+                .in('product_id', productIds);
+
+            if (ratingsError) {
+                console.warn("No se pudieron cargar los ratings de los productos. Mostrando sin ellos.", ratingsError);
+            } else {
+                // Inyectar los datos de rating en los objetos de producto
+                products.forEach(product => {
+                    const ratingData = ratings.find(r => r.product_id === product.id);
+                    if (ratingData) {
+                        product.average_rating = ratingData.average_rating;
+                        product.rating_count = ratingData.rating_count;
+                    }
+                });
+            }
+            // --- Fin de la carga de Ratings ---
 
             const productPromises = products.map(async (product) => {
                 const { data: images, error: imageError } = await supabaseClient
@@ -646,12 +668,15 @@ if (window.location.pathname.includes('admin.html')) {
                     imageUrl = images[0].image_url;
                 }
 
+                const starCountHTML = renderStarCount(product.rating_count);
+
                 return `
                     <a href="product.html?id=${product.id}" class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
                         <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
+                            <div class="asset-rating-summary">${starCountHTML}</div>
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </a>
@@ -757,6 +782,26 @@ if (window.location.pathname.includes('admin.html')) {
                 return;
             }
 
+            // --- Carga de Ratings (separada y tolerante a fallos) ---
+            const productIds = products.map(p => p.id);
+            const { data: ratings, error: ratingsError } = await supabaseClient
+                .from('products_with_ratings')
+                .select('product_id, average_rating, rating_count')
+                .in('product_id', productIds);
+
+            if (ratingsError) {
+                console.warn("No se pudieron cargar los ratings de los productos de la categoría. Mostrando sin ellos.", ratingsError);
+            } else {
+                products.forEach(product => {
+                    const ratingData = ratings.find(r => r.product_id === product.id);
+                    if (ratingData) {
+                        product.average_rating = ratingData.average_rating;
+                        product.rating_count = ratingData.rating_count;
+                    }
+                });
+            }
+            // --- Fin de la carga de Ratings ---
+
             const productPromises = products.map(async (product) => {
                 const { data: images, error: imageError } = await supabaseClient
                     .from('product_images')
@@ -771,12 +816,15 @@ if (window.location.pathname.includes('admin.html')) {
                     imageUrl = images[0].image_url;
                 }
 
+                const starCountHTML = renderStarCount(product.rating_count);
+
                 return `
                     <a href="product.html?id=${product.id}" class="asset-card">
                         <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
                         <img src="${imageUrl}" alt="${product.name}" class="asset-image">
                         <div class="asset-info">
                             <h3 class="asset-title">${product.name}</h3>
+                             <div class="asset-rating-summary">${starCountHTML}</div>
                             <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
                         </div>
                     </a>
@@ -1475,6 +1523,22 @@ if (window.location.pathname.includes('admin.html')) {
             document.querySelector('.product-title').textContent = product.name;
             document.querySelector('.product-author a').textContent = (product.profiles ? product.profiles.username : 'Vendedor Desconocido') || 'Vendedor Desconocido';
             document.querySelector('.product-price').textContent = product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`;
+
+            // --- Carga de Rating (separada y tolerante a fallos) ---
+            const { data: ratingData, error: ratingError } = await supabaseClient
+                .from('products_with_ratings')
+                .select('average_rating, rating_count')
+                .eq('product_id', productId)
+                .single();
+
+            if (ratingError) {
+                console.warn(`No se pudo cargar el rating para el producto ${productId}.`, ratingError);
+            } else if (ratingData && ratingData.rating_count > 0) {
+                const ratingSummaryEl = document.getElementById('product-rating-summary');
+                const starsHTML = renderStars(ratingData.average_rating);
+                ratingSummaryEl.innerHTML = `<span class="stars">${starsHTML}</span> (${ratingData.rating_count} ${ratingData.rating_count === 1 ? 'voto' : 'votos'})`;
+            }
+            // --- Fin de la carga de Rating ---
             document.querySelector('.product-description').innerHTML = `<h2>Descripción</h2><p>${product.description.replace(/\n/g, '<br>')}</p>`;
 
             const mainMediaContainer = document.querySelector('.main-media');
@@ -1546,11 +1610,60 @@ if (window.location.pathname.includes('admin.html')) {
                  getFreeBtn.style.display = 'none';
             }
 
-            // Cargar comentarios
+            // Cargar comentarios y configurar formulario
             await loadProductComments(productId);
+            await configureCommentForm(productId);
         }
 
         // --- Lógica de Comentarios y Votación ---
+
+        async function configureCommentForm(productId) {
+            const commentForm = document.getElementById('comment-form');
+            if (!commentForm) return;
+
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            if (!user) {
+                // Deshabilitar para usuarios no logueados
+                commentForm.querySelector('textarea').disabled = true;
+                commentForm.querySelector('button').disabled = true;
+                const ratingInput = document.getElementById('rating-input');
+                if(ratingInput) ratingInput.innerHTML = '<p class="auth-notice">Debes <a href="login.html">iniciar sesión</a> y poseer este producto para calificarlo.</p>';
+                return;
+            }
+
+            // Comprobar si el usuario posee el asset
+            const { data: ownedAsset, error } = await supabaseClient
+                .from('user_owned_assets')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('product_id', productId)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Error checking asset ownership:", error);
+                return;
+            }
+
+            if (!ownedAsset) {
+                // Deshabilitar si el usuario no posee el asset
+                 commentForm.querySelector('textarea').disabled = true;
+                 commentForm.querySelector('button').disabled = true;
+                 const ratingInput = document.getElementById('rating-input');
+                 if(ratingInput) ratingInput.innerHTML = '<p class="auth-notice">Debes poseer este producto para poder calificarlo.</p>';
+            } else {
+                // Habilitar el formulario y renderizar las estrellas para calificar
+                const ratingInput = document.getElementById('rating-input');
+                if (ratingInput) {
+                    let starsHTML = '';
+                    for (let i = 5; i >= 1; i--) {
+                        starsHTML += `<input type="radio" id="star${i}" name="rating" value="${i}" /><label for="star${i}">★</label>`;
+                    }
+                    ratingInput.innerHTML = starsHTML;
+                }
+            }
+        }
+
         async function loadProductComments(productId) {
             const commentsContainer = document.getElementById('comments-section');
             if (!commentsContainer) return;
@@ -1583,7 +1696,7 @@ if (window.location.pathname.includes('admin.html')) {
             }
 
             const commentHTML = comments.map(comment => `
-                <li class="comment" data-comment-id="${comment.id}">
+                <li class="comment ${comment.comment_type || ''}" data-comment-id="${comment.id}">
                     <div class="comment-author">${comment.author_username || 'Anónimo'}</div>
                     <div class="comment-body"><p>${(comment.content || '').replace(/\n/g, '<br>')}</p></div>
                     <div class="comment-footer">
@@ -1612,29 +1725,46 @@ if (window.location.pathname.includes('admin.html')) {
                 e.preventDefault();
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (!user) {
-                    alert('Debes iniciar sesión para comentar.');
+                    alert('Debes iniciar sesión para calificar.');
                     return;
                 }
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const productId = urlParams.get('id');
-                const commentBodyInput = document.getElementById('comment-body');
-                const commentBody = commentBodyInput.value;
+                const comment = document.getElementById('comment-body').value;
+                const ratingInput = document.querySelector('input[name="rating"]:checked');
+                const rating = ratingInput ? parseInt(ratingInput.value) : null;
+                const commentTypeInput = document.querySelector('input[name="comment_type"]:checked');
+                const commentType = commentTypeInput ? commentTypeInput.value : 'positive'; // Default a 'positive'
 
-                if (!commentBody.trim()) {
-                    alert('El comentario no puede estar vacío.');
+                if (!rating && !comment.trim()) {
+                    alert('Debes seleccionar una calificación o escribir un comentario para publicar.');
                     return;
                 }
 
-                const { error } = await supabaseClient
-                    .from('comments')
-                    .insert({ product_id: productId, user_id: user.id, content: commentBody });
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('submit-review', {
+                        body: {
+                            productId,
+                            rating,
+                            comment,
+                            commentType,
+                        },
+                    });
 
-                if (error) {
-                    alert('Error al publicar el comentario: ' + error.message);
-                } else {
-                    commentBodyInput.value = '';
-                    loadProductComments(productId); // Recargar comentarios
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+
+                    alert('¡Gracias por tu reseña!');
+
+                    // Limpiar y recargar para mostrar los cambios
+                    document.getElementById('comment-body').value = '';
+                    if (ratingInput) ratingInput.checked = false;
+                    loadProductDetails();
+
+                } catch (error) {
+                    console.error("Error submitting review via Edge Function:", error);
+                    alert('Error al publicar tu reseña: ' + error.message);
                 }
             });
         }
@@ -1687,3 +1817,37 @@ if (window.location.pathname.includes('admin.html')) {
         loadProductDetails();
     }
 });
+
+// --- Funciones de Ayuda ---
+
+/**
+ * Renderiza la calificación promedio como una serie de 5 estrellas.
+ * @param {number} averageRating - La calificación promedio (ej. 4.5).
+ * @returns {string} El HTML para las 5 estrellas.
+ */
+function renderStars(averageRating) {
+    const rating = Math.round(averageRating * 2) / 2; // Redondear al 0.5 más cercano
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        if (rating >= i) {
+            html += '★'; // Estrella llena
+        } else if (rating === i - 0.5) {
+            html += '◐'; // Media estrella (requiere un buen font)
+        } else {
+            html += '☆'; // Estrella vacía
+        }
+    }
+    return html;
+}
+
+/**
+ * Renderiza una sola estrella seguida del número total de calificaciones.
+ * @param {number} ratingCount - El número total de calificaciones.
+ * @returns {string} El HTML para el contador de estrellas.
+ */
+function renderStarCount(ratingCount) {
+    if (ratingCount > 0) {
+        return `★ ${ratingCount}`;
+    }
+    return ''; // No mostrar nada si no hay calificaciones
+}

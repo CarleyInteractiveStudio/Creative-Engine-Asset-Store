@@ -38,6 +38,7 @@
             <div class="product-info-panel">
                 <h1 class="product-title">Cargando...</h1>
                 <div class="product-author">por <a href="#">...</a></div>
+                <div class="product-rating" id="product-rating-summary"></div> <!-- Contenedor para las estrellas -->
                 <div class="product-price">...</div>
                 <div class="product-actions">
                     <div id="paypal-button-container"></div>
@@ -58,16 +59,18 @@
         <div class="product-feedback-section">
             <h2>Calificaciones y Comentarios</h2>
 
-            <!-- Aquí se mostrará el resumen de calificaciones (estrellas) -->
-            <div class="ratings-summary" id="ratings-summary">
-                <!-- El contenido se cargará con JS -->
-            </div>
-
             <!-- Formulario para dejar un nuevo comentario -->
             <div id="comments-section">
                 <h3>Comentarios</h3>
                 <form id="comment-form" class="comment-form">
-                    <textarea id="comment-body" placeholder="Escribe tu comentario aquí..." required></textarea>
+                    <div class="comment-type-selector">
+                        <label>Tipo de Comentario:</label>
+                        <input type="radio" id="comment-type-positive" name="comment_type" value="positive" checked>
+                        <label for="comment-type-positive">Positivo</label>
+                        <input type="radio" id="comment-type-negative" name="comment_type" value="negative">
+                        <label for="comment-type-negative">Negativo</label>
+                    </div>
+                    <textarea id="comment-body" placeholder="Escribe tu comentario aquí..."></textarea>
                     <div class="comment-form-footer">
                          <!-- Aquí se mostrarán las estrellas para calificar -->
                         <div class="rating-input" id="rating-input">
