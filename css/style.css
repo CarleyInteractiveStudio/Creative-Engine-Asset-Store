@@ -49,42 +49,6 @@ a {
     color: var(--secondary-color);
 }
 
-/* --- Estilos para el Formulario de Búsqueda en la Página Principal --- */
-.hero-search-form {
-    display: flex;
-    justify-content: center;
-    margin-top: 1.5rem;
-    gap: 10px;
-}
-
-.hero-search-form .search-input {
-    width: 100%;
-    max-width: 500px;
-    padding: 15px 20px;
-    font-size: 1rem;
-    border: 2px solid var(--primary-color);
-    border-radius: 5px;
-    background-color: var(--white-color);
-}
-
-.hero-search-form .btn {
-    padding: 15px 30px;
-    font-size: 1rem;
-}
-
-/* --- Estilos para la Página de Resultados de Búsqueda --- */
-.search-query-display {
-    font-size: 1.2rem;
-    color: #555;
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.search-query-display #search-query {
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
 .dashboard-product-thumbnail {
     width: 100px;
     height: 75px;

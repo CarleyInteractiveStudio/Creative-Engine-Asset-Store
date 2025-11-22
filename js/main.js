@@ -1545,115 +1545,145 @@ if (window.location.pathname.includes('admin.html')) {
                  buyPointsBtn.style.display = 'inline-block';
                  getFreeBtn.style.display = 'none';
             }
+
+            // Cargar comentarios
+            await loadProductComments(productId);
         }
-        loadProductDetails();
-    }
-});
 
-// --- Lógica para la página de búsqueda ---
-if (window.location.pathname.includes('search.html')) {
-    const searchResultsGrid = document.getElementById('search-results-grid');
-    const searchQuerySpan = document.getElementById('search-query');
-    const maxPriceSlider = document.getElementById('max-price-slider');
-    const maxPriceValue = document.getElementById('max-price-value');
-    const sortBySelect = document.getElementById('sort-by');
-    const applyFiltersBtn = document.getElementById('apply-filters-btn');
+        // --- Lógica de Comentarios y Votación ---
+        async function loadProductComments(productId) {
+            const commentsContainer = document.getElementById('comments-section');
+            if (!commentsContainer) return;
 
-    async function executeSearch() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const queryText = urlParams.get('query') || '';
-        const maxPrice = urlParams.get('price') || 200;
-        const [sortBy, sortOrder] = (urlParams.get('sort') || 'average_rating:desc').split(':');
+            const commentsList = document.getElementById('comments-list');
+            if(!commentsList) return;
 
-        // Update UI elements to reflect current search
-        searchQuerySpan.textContent = queryText;
-        document.title = `Búsqueda: ${queryText} - Creative Engine Asset Store`;
-        maxPriceSlider.value = maxPrice;
-        maxPriceValue.textContent = `Hasta $${maxPrice}`;
-        sortBySelect.value = `${sortBy}:${sortOrder}`;
-
-        searchResultsGrid.innerHTML = '<p>Buscando...</p>';
-
-        try {
-            let query = supabaseClient
-                .from('products_with_ratings')
+            const { data: comments, error } = await supabaseClient
+                .from('comments_with_details') // Usamos la vista
                 .select('*')
-                .eq('status', 'approved')
-                .lte('price', maxPrice);
+                .eq('product_id', productId)
+                .order('created_at', { ascending: false });
 
-            // Add full-text search if a query is present
-            if (queryText) {
-                query = query.textSearch('fts', queryText, {
-                    type: 'websearch'
-                });
-            }
-
-            // Apply sorting
-            const orderOptions = { ascending: sortOrder === 'asc' };
-             if (sortBy === 'average_rating') {
-                query = query.order('average_rating', orderOptions).order('rating_count', { ascending: false });
-            } else {
-                query = query.order(sortBy, orderOptions);
-            }
-
-            const { data: products, error } = await query;
-
-            if (error) throw error;
-
-            if (!products || products.length === 0) {
-                searchResultsGrid.innerHTML = '<p>No se encontraron productos para tu búsqueda.</p>';
+            if (error) {
+                console.error('Error loading comments:', error);
+                commentsList.innerHTML = '<p class="error">No se pudieron cargar los comentarios.</p>';
                 return;
             }
 
-             const productPromises = products.map(async (product) => {
-                const { data: images, error: imageError } = await supabaseClient.from('product_images').select('image_url').eq('product_id', product.id).limit(1);
-                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (!imageError && images && images.length > 0) imageUrl = images[0].image_url;
-
-                const starsHTML = renderStars(product.average_rating);
-
-                return `
-                    <a href="product.html?id=${product.id}" class="asset-card">
-                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                        <div class="asset-info">
-                            <h3 class="asset-title">${product.name}</h3>
-                            <div class="asset-rating-summary">
-                                <span class="stars">${starsHTML}</span>
-                                <span class="rating-count">(${product.rating_count})</span>
-                            </div>
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                        </div>
-                    </a>
-                `;
-            });
-
-            const productHTML = await Promise.all(productPromises);
-            searchResultsGrid.innerHTML = productHTML.join('');
-
-        } catch (error) {
-            console.error('Error al realizar la búsqueda:', error);
-            searchResultsGrid.innerHTML = `<p class="error">Error al buscar productos: ${error.message}</p>`;
+            renderComments(comments);
         }
+
+        function renderComments(comments) {
+            const commentsList = document.getElementById('comments-list');
+            if (!commentsList) return;
+
+            if (!comments || comments.length === 0) {
+                commentsList.innerHTML = '<li><p>Todavía no hay comentarios. ¡Sé el primero!</p></li>';
+                return;
+            }
+
+            const commentHTML = comments.map(comment => `
+                <li class="comment" data-comment-id="${comment.id}">
+                    <div class="comment-author">${comment.author_username || 'Anónimo'}</div>
+                    <div class="comment-body"><p>${(comment.content || '').replace(/\n/g, '<br>')}</p></div>
+                    <div class="comment-footer">
+                        <div class="comment-votes">
+                            <button class="comment-vote-btn" data-vote-type="upvote" title="Útil">
+                                👍 <span class="upvote-count">${comment.upvotes || 0}</span>
+                            </button>
+                            <button class="comment-vote-btn" data-vote-type="downvote" title="No útil">
+                                👎 <span class="downvote-count">${comment.downvotes || 0}</span>
+                            </button>
+                            <button class="comment-vote-btn" data-vote-type="support" title="¡Gracias!">
+                                ❤️ <span class="support-count">${comment.supports || 0}</span>
+                            </button>
+                        </div>
+                        <div class="comment-date">${new Date(comment.created_at).toLocaleDateString()}</div>
+                    </div>
+                </li>
+            `).join('');
+
+            commentsList.innerHTML = commentHTML;
+        }
+
+        const commentForm = document.getElementById('comment-form');
+        if (commentForm) {
+            commentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    alert('Debes iniciar sesión para comentar.');
+                    return;
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const productId = urlParams.get('id');
+                const commentBodyInput = document.getElementById('comment-body');
+                const commentBody = commentBodyInput.value;
+
+                if (!commentBody.trim()) {
+                    alert('El comentario no puede estar vacío.');
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from('comments')
+                    .insert({ product_id: productId, user_id: user.id, content: commentBody });
+
+                if (error) {
+                    alert('Error al publicar el comentario: ' + error.message);
+                } else {
+                    commentBodyInput.value = '';
+                    loadProductComments(productId); // Recargar comentarios
+                }
+            });
+        }
+
+        const commentsList = document.getElementById('comments-list');
+        if (commentsList) {
+            commentsList.addEventListener('click', async (e) => {
+                const voteButton = e.target.closest('.comment-vote-btn');
+                if (!voteButton) return;
+
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) {
+                    alert('Debes iniciar sesión para votar.');
+                    return;
+                }
+
+                const commentLi = voteButton.closest('.comment');
+                const commentId = commentLi.dataset.commentId;
+                const voteType = voteButton.dataset.voteType;
+
+                voteButton.disabled = true;
+
+                try {
+                    const { data, error } = await supabaseClient.functions.invoke('vote-comment', {
+                        body: { commentId: commentId, voteType },
+                    });
+
+                    if (error) throw error;
+                    if (data.error) throw new Error(data.error);
+
+                    if (data.newCounts) {
+                        const upvoteSpan = commentLi.querySelector('.upvote-count');
+                        const downvoteSpan = commentLi.querySelector('.downvote-count');
+                        const supportSpan = commentLi.querySelector('.support-count');
+
+                        if(upvoteSpan) upvoteSpan.textContent = data.newCounts.upvotes || 0;
+                        if(downvoteSpan) downvoteSpan.textContent = data.newCounts.downvotes || 0;
+                        if(supportSpan) supportSpan.textContent = data.newCounts.supports || 0;
+                    }
+
+                } catch (err) {
+                    alert(`Error al procesar el voto: ${err.message}`);
+                    console.error(err);
+                } finally {
+                    voteButton.disabled = false;
+                }
+            });
+        }
+
+        loadProductDetails();
     }
-
-    // Event listener for the price slider
-    maxPriceSlider.addEventListener('input', () => {
-        maxPriceValue.textContent = `Hasta $${maxPriceSlider.value}`;
-    });
-
-    // Event listener for the apply filters button
-    applyFiltersBtn.addEventListener('click', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const newSort = sortBySelect.value;
-        const newPrice = maxPriceSlider.value;
-
-        urlParams.set('sort', newSort);
-        urlParams.set('price', newPrice);
-
-        window.location.search = urlParams.toString();
-    });
-
-    // Initial search execution
-    executeSearch();
-}
+});

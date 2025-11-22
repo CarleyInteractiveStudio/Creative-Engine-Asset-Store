@@ -53,6 +53,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- Sección de Comentarios y Calificaciones -->
+        <div class="product-feedback-section">
+            <h2>Calificaciones y Comentarios</h2>
+
+            <!-- Aquí se mostrará el resumen de calificaciones (estrellas) -->
+            <div class="ratings-summary" id="ratings-summary">
+                <!-- El contenido se cargará con JS -->
+            </div>
+
+            <!-- Formulario para dejar un nuevo comentario -->
+            <div id="comments-section">
+                <h3>Comentarios</h3>
+                <form id="comment-form" class="comment-form">
+                    <textarea id="comment-body" placeholder="Escribe tu comentario aquí..." required></textarea>
+                    <div class="comment-form-footer">
+                         <!-- Aquí se mostrarán las estrellas para calificar -->
+                        <div class="rating-input" id="rating-input">
+                            <!-- Estrellas generadas por JS -->
+                        </div>
+                        <button type="submit" class="btn btn-primary">Publicar Comentario</button>
+                    </div>
+                </form>
+
+                <!-- Lista de comentarios existentes -->
+                <ul id="comments-list" class="comments-list">
+                    <!-- Los comentarios se cargarán aquí con JS -->
+                </ul>
+            </div>
+        </div>
     </main>
 
     <footer class="main-footer">
