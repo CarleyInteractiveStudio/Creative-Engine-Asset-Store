@@ -1,13 +1,21 @@
--- VISTA PARA OBTENER RATINGS Y CONTEOS POR PRODUCTO
--- Corregido para unirse a la tabla 'ratings' en lugar de 'comments'
+-- VISTA PARA OBTENER RATINGS Y CONTEOS POR PRODUCTO (CON IMAGEN)
 CREATE OR REPLACE VIEW products_with_ratings AS
 SELECT
     p.id,
     p.name,
+    p.description,
     p.price,
-    COALESCE(AVG(r.rating), 0) AS average_rating,
-    COUNT(r.id) AS rating_count,
-    COALESCE(SUM(r.rating), 0) AS total_stars
+    p.status,
+    p.category_id,
+    p.fts,
+    COALESCE(SUM(r.rating), 0) AS total_stars,
+    (
+        SELECT image_url
+        FROM product_images pi
+        WHERE pi.product_id = p.id
+        ORDER BY created_at ASC
+        LIMIT 1
+    ) AS image_url
 FROM
     products p
 LEFT JOIN

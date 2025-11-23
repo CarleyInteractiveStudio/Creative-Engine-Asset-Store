@@ -9,6 +9,7 @@ if (supabaseUrl === 'TU_SUPABASE_URL' || supabaseKey === 'TU_SUPABASE_KEY') {
 }
 
 const supabaseClient = createClient(supabaseUrl, supabaseKey);
+window.supabaseClient = supabaseClient; // Hacer accesible globalmente
 
 document.addEventListener('DOMContentLoaded', () => {
     // Scripts para la Creative Engine Asset Store
@@ -616,10 +617,9 @@ if (window.location.pathname.includes('admin.html')) {
     const featuredAssetGrid = document.querySelector('#featured .asset-grid');
     if (featuredAssetGrid) {
         async function loadFeaturedProducts() {
-            // 1. Cargar los productos base
             const { data: products, error } = await supabaseClient
-                .from('products')
-                .select('*')
+                .from('products_with_ratings')
+                .select('id, name, price, total_stars, image_url')
                 .eq('status', 'approved')
                 .limit(4);
 
@@ -632,60 +632,53 @@ if (window.location.pathname.includes('admin.html')) {
                 featuredAssetGrid.innerHTML = '<p>No hay productos destacados en este momento.</p>';
                 return;
             }
-
-            // 2. Cargar los ratings (incluyendo la suma de estrellas)
-            const productIds = products.map(p => p.id);
-            const { data: ratings, error: ratingsError } = await supabaseClient
-                .from('products_with_ratings')
-                .select('id, total_stars')
-                .in('id', productIds);
-
-            if (ratingsError) {
-                console.warn("No se pudieron cargar los ratings. Mostrando productos sin ellos.", ratingsError);
-            } else {
-                // Inyectar los datos de rating en los objetos de producto
-                products.forEach(product => {
-                    const ratingData = ratings.find(r => r.id === product.id);
-                    product.total_stars = ratingData ? ratingData.total_stars : 0;
-                });
-            }
-
-            // 3. Renderizar los productos con la información combinada
-            const productPromises = products.map(async (product) => {
-                const { data: images, error: imageError } = await supabaseClient
-                    .from('product_images')
-                    .select('image_url')
-                    .eq('product_id', product.id)
-                    .limit(1);
-
-                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (!imageError && images && images.length > 0) {
-                    imageUrl = images[0].image_url;
-                }
-
-                // Mostrar la suma de estrellas si es mayor que cero
-                const starDisplay = product.total_stars > 0
-                    ? `<div class="asset-rating-summary">★ ${product.total_stars}</div>`
-                    : '';
-
-                return `
-                    <a href="product.html?id=${product.id}" class="asset-card">
-                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                        <div class="asset-info">
-                            <h3 class="asset-title">${product.name}</h3>
-                            ${starDisplay}
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                        </div>
-                    </a>
-                `;
-            });
-
-            const productHTML = await Promise.all(productPromises);
-            featuredAssetGrid.innerHTML = productHTML.join('');
+            featuredAssetGrid.innerHTML = products.map(createProductCard).join('');
         }
         loadFeaturedProducts();
+        loadHeroImages(); // Cargar imágenes del hero
     }
+
+    async function loadHeroImages() {
+    const heroSection = document.querySelector('.hero');
+    if (!heroSection) return;
+
+    // Usar la vista para obtener los productos ya ordenados y con su imagen en una sola consulta
+    const { data: topProducts, error } = await window.supabaseClient
+        .from('products_with_ratings')
+        .select('id, name, image_url')
+        .order('total_stars', { ascending: false })
+        .not('image_url', 'is', null) // Asegurarnos de que solo vengan productos con imagen
+        .limit(3);
+
+    if (error) {
+        console.error('Error fetching top products for hero:', error);
+        heroSection.style.backgroundColor = 'black'; // Color por defecto si falla
+        return;
+    }
+
+    if (topProducts && topProducts.length > 0) {
+        // Limpiar el fondo por defecto
+        heroSection.style.background = 'none';
+
+        const heroImageContainer = document.createElement('div');
+        heroImageContainer.className = 'hero-image-container';
+
+        topProducts.forEach((product, index) => {
+            const link = document.createElement('a');
+            link.href = `product.html?id=${product.id}`;
+            link.className = `hero-image-slice slice-${index + 1}`;
+            link.style.backgroundImage = `url('${product.image_url}')`;
+            heroImageContainer.appendChild(link);
+        });
+
+        // Insertar el contenedor de imágenes antes del contenido del hero
+        heroSection.insertBefore(heroImageContainer, heroSection.firstChild);
+
+    } else {
+        // Si no hay productos, mantener el fondo negro
+        heroSection.style.backgroundColor = 'black';
+    }
+}
 
     // Lógica para cargar categorías dinámicamente en la página de inicio
     const categoryGrid = document.querySelector('.category-browser .category-grid');
@@ -743,9 +736,10 @@ if (window.location.pathname.includes('admin.html')) {
             }
 
             let query = supabaseClient
-                .from('products')
-                .select('*')
+                .from('products_with_ratings')
+                .select('id, name, price, total_stars, image_url')
                 .eq('status', 'approved');
+
 
             // Si hay un nombre de categoría en la URL, lo usamos para filtrar.
             if (categoryName) {
@@ -779,54 +773,7 @@ if (window.location.pathname.includes('admin.html')) {
                 categoryAssetGrid.innerHTML = '<p>No hay productos en esta categoría.</p>';
                 return;
             }
-
-            // Cargar los ratings (incluyendo la suma de estrellas)
-            const productIds = products.map(p => p.id);
-            const { data: ratings, error: ratingsError } = await supabaseClient
-                .from('products_with_ratings')
-                .select('id, total_stars')
-                .in('id', productIds);
-
-            if (ratingsError) {
-                console.warn("No se pudieron cargar los ratings. Mostrando productos sin ellos.", ratingsError);
-            } else {
-                products.forEach(product => {
-                    const ratingData = ratings.find(r => r.id === product.id);
-                    product.total_stars = ratingData ? ratingData.total_stars : 0;
-                });
-            }
-
-            const productPromises = products.map(async (product) => {
-                const { data: images, error: imageError } = await supabaseClient
-                    .from('product_images')
-                    .select('image_url')
-                    .eq('product_id', product.id)
-                    .limit(1);
-
-                let imageUrl = 'https://via.placeholder.com/300x200.png?text=No+Image';
-                if (!imageError && images && images.length > 0) {
-                    imageUrl = images[0].image_url;
-                }
-
-                const starDisplay = product.total_stars > 0
-                    ? `<div class="asset-rating-summary">★ ${product.total_stars}</div>`
-                    : '';
-
-                return `
-                    <a href="product.html?id=${product.id}" class="asset-card">
-                        <button class="wishlist-btn" data-product-id="${product.id}">❤️</button>
-                        <img src="${imageUrl}" alt="${product.name}" class="asset-image">
-                        <div class="asset-info">
-                            <h3 class="asset-title">${product.name}</h3>
-                            ${starDisplay}
-                            <p class="asset-price">${product.price === 0 ? 'Gratis' : `\$${product.price.toFixed(2)}`}</p>
-                        </div>
-                    </a>
-                `;
-            });
-
-            const productHTML = await Promise.all(productPromises);
-            categoryAssetGrid.innerHTML = productHTML.join('');
+            categoryAssetGrid.innerHTML = products.map(createProductCard).join('');
         }
         loadCategoryProducts();
     }

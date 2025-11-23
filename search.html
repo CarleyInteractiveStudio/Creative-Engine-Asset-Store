@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Creative Engine Asset Store</title>
+    <title>Resultados de Búsqueda - Creative Engine Asset Store</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -24,26 +24,13 @@
     </header>
 
     <main class="container">
-        <section class="hero">
-            <div class="hero-content">
-                <form action="search.html" method="GET" id="search-form" class="search-form">
-                    <input type="search" name="query" placeholder="Buscar assets por nombre o descripción..." required>
-                    <button type="submit">Buscar</button>
-                </form>
-            </div>
+        <section class="search-results-header">
+            <h1>Resultados para: "<span id="search-query"></span>"</h1>
         </section>
 
-        <section id="featured" class="asset-showcase">
-            <h2>Assets Destacados</h2>
-            <div class="asset-grid">
-                <!-- Product cards will be populated by JS -->
-            </div>
-        </section>
-
-        <section class="category-browser">
-            <h2>Explorar por Categoría</h2>
-            <div class="category-grid">
-                <!-- Las categorías se cargarán aquí dinámicamente -->
+        <section id="search-results" class="asset-showcase">
+            <div class="asset-grid" id="search-results-grid">
+                <!-- Los resultados de la búsqueda se cargarán aquí -->
             </div>
         </section>
     </main>
@@ -54,5 +41,6 @@
 
     <script src="js/ui.js" defer></script>
     <script src="js/main.js" defer></script>
+    <script src="js/search.js" defer></script>
 </body>
 </html>
